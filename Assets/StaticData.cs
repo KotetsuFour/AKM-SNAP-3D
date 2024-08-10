@@ -43,4 +43,16 @@ public static class StaticData
         return null;
     }
 
+    public static Location getRandomLocation()
+    {
+        return allLocations[Random.Range(0, allLocations.Count)];
+    }
+    public static CharacterCard getRandomCostCard(int cost)
+    {
+        return cardsByCost[cost][Random.Range(0, cardsByCost[cost].Count)];
+    }
+    public static CharacterCard getRandomCard()
+    {
+        return allCards[Random.Range(0, allCards.Count)];
+    }
 }

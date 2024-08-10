@@ -28,4 +28,12 @@ public class PositionState : MonoBehaviour
         }
     }
 
+    public bool isEmpty()
+    {
+        return cardsHere.Count == 0;
+    }
+    public bool isFull()
+    {
+        return cardsHere.Count >= maxCardsAllowed;
+    }
 }

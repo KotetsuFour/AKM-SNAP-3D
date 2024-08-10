@@ -55,10 +55,6 @@ public class Board : MonoBehaviour
     public List<CharacterCard> cardsToReveal;
     private int[] turnOrder;
 
-    private int revealIdx;
-    private int locationOngoingIdx;
-    private int cardOngoingIdx;
-
     private LinkedList<GameNotification> actionQueue;
 
     public List<NotificationHandler> getAllReactors()
@@ -77,11 +73,28 @@ public class Board : MonoBehaviour
             ret.AddRange(hands[turnOrder[q]].cardsHere);
             ret.AddRange(destroyedCardPiles[turnOrder[q]].cardsHere);
             ret.AddRange(discardPiles[turnOrder[q]].cardsHere);
-            foreach (Lane lane in lanes)
+        }
+        foreach (Lane lane in lanes)
+        {
+            List<CharacterCard> playedCards = lane.getAllCardsHere();
+            ret.AddRange(playedCards);
+        }
+        return ret;
+    }
+    public List<NotificationHandler> getAllPermissionNeeded()
+    {
+        List<NotificationHandler> ret = new List<NotificationHandler>();
+        foreach (Lane lane in lanes)
+        {
+            if (lane.location != null)
             {
-                List<CharacterCard> playedCards = lane.getAllCardsHere();
-                ret.AddRange(playedCards);
+                ret.Add(lane.location);
             }
+        }
+        foreach (Lane lane in lanes)
+        {
+            List<CharacterCard> playedCards = lane.getAllCardsHere();
+            ret.AddRange(playedCards);
         }
         return ret;
     }
@@ -137,6 +150,54 @@ public class Board : MonoBehaviour
                 actionQueue.AddLast(draw);
             }
         }
+    }
+
+    public Lane oneLaneToTheRight(Lane lane)
+    {
+        if (StaticData.numPlayers == 2)
+        {
+            if (lane == twoPlayerLeftLane)
+            {
+                return twoPlayerMiddleLane;
+            }
+            else if (lane == twoPlayerMiddleLane)
+            {
+                return twoPlayerRightLane;
+            }
+            else if (lane == twoPlayerRightLane)
+            {
+                return null;
+            }
+
+        } else if (StaticData.numPlayers == 3)
+        {
+            //TODO
+        }
+        return null;
+    }
+    public Lane oneLaneToTheLeft(Lane lane)
+    {
+        if (StaticData.numPlayers == 2)
+        {
+            if (lane == twoPlayerLeftLane)
+            {
+                return null;
+            }
+            else if (lane == twoPlayerMiddleLane)
+            {
+                return twoPlayerLeftLane;
+            }
+            else if (lane == twoPlayerRightLane)
+            {
+                return twoPlayerMiddleLane;
+            }
+
+        }
+        else if (StaticData.numPlayers == 3)
+        {
+            //TODO
+        }
+        return null;
     }
     public void startOfTurn()
     {
@@ -395,6 +456,8 @@ public class Board : MonoBehaviour
             for (int q = 0; q < StaticData.numPlayers; q++)
             {
                 GameNotification draw = new GameNotification(GameNotification.Nature.RELOCATE_CARD, true, null);
+                draw.setCards(new CharacterCard[] { decks[q].topCard() });
+                draw.setPositions(new PositionState[] { decks[q], hands[q] });
                 actionQueue.AddLast(draw);
             }
 
@@ -408,20 +471,21 @@ public class Board : MonoBehaviour
             {
                 if (turnOrder[q] == StaticData.player)
                 {
-                    foreach (CharacterCard card in myCardsToReveal)
-                    {
-                        GameNotification reveal = new GameNotification(GameNotification.Nature.REVEAL_CARD, true, null);
-                        reveal.setCards(new CharacterCard[] { card });
-                        actionQueue.AddLast(reveal);
-                    }
-                    //                    cardsToReveal.AddRange(myCardsToReveal);
-                    //TODO unreveal cards
                     foreach (CharacterCard card in myMovedCards)
                     {
                         GameNotification move = new GameNotification(GameNotification.Nature.REGISTER_MOVE, false, null);
                         move.setCards(new CharacterCard[] { card });
                         actionQueue.AddLast(move);
-                        afterMove = actionQueue.Last;
+                    }
+                    afterMove = actionQueue.Last;
+                    foreach (CharacterCard card in myCardsToReveal)
+                    {
+                        GameNotification move = new GameNotification(GameNotification.Nature.PLAY_CARD, false, null);
+                        move.setCards(new CharacterCard[] { card });
+                        move.setInts(new int[] { 0 });
+                        GameNotification reveal = new GameNotification(GameNotification.Nature.REVEAL_CARD, true, null);
+                        reveal.setCards(new CharacterCard[] { card });
+                        actionQueue.AddLast(reveal);
                     }
                     continue;
                 }
@@ -431,7 +495,12 @@ public class Board : MonoBehaviour
                     if (actions[w] == 0)
                     {
                         CharacterCard card = hands[turnOrder[q]].cardsHere[actions[w + 1]];
-                        GameNotification.move(card, hands[turnOrder[q]], lanes[actions[w + 2]].segments[turnOrder[q]]);
+                        GameNotification move = new GameNotification(GameNotification.Nature.PLAY_CARD, false, null);
+                        move.setCards( new CharacterCard[] { card });
+                        move.setPositions(new PositionState[] { hands[turnOrder[q]], lanes[actions[w + 2]].segments[turnOrder[q]] });
+                        move.setInts(new int[] { 1 });
+                        actionQueue.AddAfter(afterMove, move);
+                        afterMove = afterMove.Next;
                         //TODO unreveal card
                         cardsToReveal.Add(card);
                         card.turnPlayed = turn;
@@ -449,7 +518,7 @@ public class Board : MonoBehaviour
                         GameNotification move = new GameNotification(GameNotification.Nature.REGISTER_MOVE, false, null);
                         move.setCards(new CharacterCard[] { card });
                         actionQueue.AddAfter(afterMove, move);
-                        afterMove = actionQueue.Last;
+                        afterMove = afterMove.Next;
                     }
                 }
             }

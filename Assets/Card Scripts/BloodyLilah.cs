@@ -4,29 +4,18 @@ using UnityEngine;
 
 public class BloodyLilah : CharacterCard
 {
-    public new List<GameNotification> getResponse(GameNotification note) {
-        List<GameNotification> ret = new List<GameNotification>();
-        if (!isMyOnReveal(note))
+    public new GameNotification.Permission allowNotification(GameNotification note)
+    {
+        if (note.getNature() == GameNotification.Nature.ON_REVEAL)
         {
-            return null;
-        }
-        foreach (Lane lane in StaticData.board.lanes)
-        {
-            for (int q = 0; q < lane.segments.Count; q++)
+            foreach (LaneSegment seg in ((LaneSegment)positionState).lane.segments)
             {
-                LaneSegment seg = lane.segments[q];
-                foreach (CharacterCard card in seg.cardsHere)
+                if (seg.cardsHere.Contains(note.getCharacterCards()[0]))
                 {
-                    if (card.characterName == "Lucid Lilah")
-                    {
-                        GameNotification putBack = new GameNotification(GameNotification.Nature.RELOCATE_CARD, true, this);
-                        putBack.setCards(new CharacterCard[] { card });
-                        putBack.setPositions(new PositionState[] { seg, StaticData.board.hands[q] });
-                        ret.Add(putBack);
-                    }
+                    return new GameNotification.Permission(this, false, 2);
                 }
             }
         }
-        return ret;
+        return new GameNotification.Permission(this, true);
     }
 }

@@ -4,13 +4,14 @@ using UnityEngine;
 
 public class BugBoy : CharacterCard
 {
+    [SerializeField] private int bonus;
     public new int getPower(Board b)
     {
         if (positionState is LaneSegment
             && positionState.cardsHere.Count >= positionState.maxCardsAllowed)
         {
-            return basePower + permanentAlterPower + temporaryAlterCost + 3;
+            return base.getPower(b) + bonus;
         }
-        return basePower + permanentAlterPower + temporaryAlterPower;
+        return base.getPower(b);
     }
 }

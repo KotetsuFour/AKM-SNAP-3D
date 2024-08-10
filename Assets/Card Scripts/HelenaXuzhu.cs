@@ -4,39 +4,21 @@ using UnityEngine;
 
 public class HelenaXuzhu : CharacterCard
 {
-    public new string onReveal(Board b)
+    public new List<GameNotification> getResponse(GameNotification note)
     {
-        Lane lane = b.getMyLane(this);
-        if (!lane.canPlayHere())
+        if (!isMyOnReveal(note))
         {
             return null;
         }
-        for (int q = 0; q < b.hands[myPlayer].Count; q++)
+        List<GameNotification> ret = new List<GameNotification>();
+        if (StaticData.board.decks[myPlayer].cardsHere.Count > 0
+            && !positionState.isFull())
         {
-            if (b.hands[myPlayer][q].characterName == "Slinky Man")
-            {
-                CharacterCard ricardo = b.hands[myPlayer][q];
-                b.hands[myPlayer].RemoveAt(q);
-                b.addToLane(lane, ricardo, myPlayer);
-                return $"Player {myPlayer}'s {characterName} summoned {ricardo.characterName} from their hand.\n";
-            }
+            GameNotification draw = new GameNotification(GameNotification.Nature.RELOCATE_CARD, true, null);
+            draw.setCards(new CharacterCard[] { StaticData.board.decks[myPlayer].topCard() });
+            draw.setPositions(new PositionState[] { StaticData.board.decks[myPlayer], StaticData.board.hands[myPlayer] });
         }
-        int idx = -1;
-        for (int q = 0; q < StaticData.allCards.Count; q++)
-        {
-            if (StaticData.allCards[q].characterName == "Slinky Man")
-            {
-                idx = q;
-                break;
-            }
-        }
-        if (idx != -1 && b.decks[myPlayer].cards.Contains(idx))
-        {
-            int ricardoIdx = b.decks[myPlayer].cards.IndexOf(idx);
-            CharacterCard ricardo = b.decks[myPlayer].drawIdx(ricardoIdx);
-            b.addToLane(lane, ricardo, myPlayer);
-            return $"Player {myPlayer}'s {characterName} summoned {ricardo.characterName} from their deck.\n";
-        }
-        return null;
+        return ret;
     }
+
 }

@@ -25,11 +25,15 @@ public abstract class CharacterCard : NotificationHandler
     public bool revealed;
     public int getPower(Board b)
     {
-        return basePower + permanentAlterPower + temporaryAlterPower;
+        return getPermanentPower() + temporaryAlterPower;
     }
     public int getPower()
     {
-        return basePower + permanentAlterPower + temporaryAlterPower;
+        return getPermanentPower() + temporaryAlterPower;
+    }
+    public int getPermanentPower()
+    {
+        return basePower + permanentAlterPower;
     }
     public int getCost(Board b, Lane lane)
     {

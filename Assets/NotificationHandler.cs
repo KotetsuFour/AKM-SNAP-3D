@@ -17,11 +17,11 @@ public class NotificationHandler : MonoBehaviour
     }
     public GameNotification.Permission allowNotification(GameNotification note)
     {
-        return new GameNotification.Permission(this, true, -1);
+        return new GameNotification.Permission(this, true);
     }
     public GameNotification.Permission allowPermission(GameNotification.Permission note)
     {
-        return new GameNotification.Permission(this, true, -1);
+        return new GameNotification.Permission(this, true);
     }
     public List<GameNotification> getResponse(GameNotification note)
     {

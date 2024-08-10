@@ -4,24 +4,32 @@ using UnityEngine;
 
 public class Cereus : CharacterCard
 {
-    public new string onReveal(Board b)
+    [SerializeField] private int bonus;
+    private int turnToCheck;
+    public new List<GameNotification> getResponse(GameNotification note)
     {
-        return $"Player {myPlayer}'s {characterName} is awaiting targets.\n";
-    }
-    public new void startOfTurn(Board b)
-    {
-        if (b.turn == turnPlayed + 1)
+        List<GameNotification> ret = new List<GameNotification>();
+        if (!isMyOnReveal(note))
         {
-            Lane lane = b.getMyLane(this);
-            int bonus = 0;
-            for (int q = 0; q < lane.segments[myPlayer].Count; q++)
+            if (note.getNature() == GameNotification.Nature.PLAY_CARD
+                && turnToCheck != 0 && StaticData.board.turn == turnPlayed + 1
+                && note.getCharacterCards()[0].positionState == positionState)
             {
-                if (lane.segments[myPlayer][q].turnPlayed == b.turn)
-                {
-                    bonus += 2;
-                }
+                GameNotification gain = new GameNotification(GameNotification.Nature.PERM_ALTER_POWER, true, this);
+                gain.setCards(new CharacterCard[] { this } );
+                gain.setInts(new int[] { bonus });
+                ret.Add(gain);
             }
-            changePermanentPower(bonus);
+            else
+            {
+                return null;
+            }
         }
+        else
+        {
+            turnToCheck = StaticData.board.turn + 1;
+        }
+
+        return ret;
     }
 }

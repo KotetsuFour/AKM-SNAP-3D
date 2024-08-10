@@ -22,6 +22,11 @@ public class GameNotification
         this.nature = nature;
         this.disputable = disputable;
         this.stage = Stage.PERMISSION;
+        this.cause = cause;
+    }
+    public NotificationHandler getCause()
+    {
+        return cause;
     }
     public void setInts(int[] vals)
     {
@@ -46,7 +51,7 @@ public class GameNotification
             return true;
         }
         permissionsQueue = new List<Permission>();
-        List<NotificationHandler> handlers = StaticData.board.getAllReactors();
+        List<NotificationHandler> handlers = StaticData.board.getAllPermissionNeeded();
         foreach (NotificationHandler handler in handlers)
         {
             Permission permit = handler.allowNotification(this);
@@ -110,7 +115,7 @@ public class GameNotification
     }
     public enum Nature
     {
-        GAME_START, TURN_START, PLAY_PHASE, TURN_END, GAME_END, FINISH, STANDBY,
+        GAME_START, TURN_START, PLAY_PHASE, TURN_END, GAME_END, FINISH, STANDBY, PLAY_CARD,
         REVEAL_LOCATION, REVEAL_CARD, REGISTER_MOVE, ON_REVEAL, ONGOING, OTHER_EFFECT, SETTLE_CARD,
         PERM_ALTER_POWER, TEMP_ALTER_POWER, ALTER_COST,
         CREATE_CARD, RELOCATE_CARD, CHANGE_LOCATION, ALTER_ONREVEAL, ALTER_ONGOING, TRANSFORM_CARD
