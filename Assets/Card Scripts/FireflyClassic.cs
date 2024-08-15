@@ -4,32 +4,25 @@ using UnityEngine;
 
 public class FireflyClassic : CharacterCard
 {
-    public new string onReveal(Board b)
+    [SerializeField] private int threshold;
+    public new List<GameNotification> getResponse(GameNotification note)
     {
-        string ret = "";
-        Lane lane = b.getMyLane(this);
-        for (int q = 0; q < lane.segments.Count; q++)
+        if (!isMyOnReveal(note))
         {
-            if (q == myPlayer)
+            return null;
+        }
+        List<GameNotification> ret = new List<GameNotification>();
+        Lane lane = ((LaneSegment)positionState).lane;
+        foreach (LaneSegment seg in lane.segments)
+        {
+            foreach (CharacterCard card in seg.cardsHere)
             {
-                continue;
-            }
-            for (int w = 0; w < lane.segments[q].Count; w++)
-            {
-                if (lane.segments[q][w].turnPlayed == turnPlayed)
+                if (card.getPower() <= threshold)
                 {
-                    CharacterCard[] cards = lane.segments[q].ToArray();
-                    ret += $"Player {myPlayer}'s {characterName} detected Player {q}'s {lane.segments[q][w].characterName} and targeted ";
-                    foreach (CharacterCard card in cards)
-                    {
-                        if (card.revealed)
-                        {
-                            card.destroy(b, q);
-                            ret += $"{card.characterName}, ";
-                        }
-                    }
-                    ret += "for destruction.\n";
-                    break;
+                    GameNotification destroy = new GameNotification(GameNotification.Nature.RELOCATE_CARD, true, this);
+                    destroy.setCards(new CharacterCard[] { card });
+                    destroy.setPositions(new PositionState[] { seg, StaticData.board.destroyedCardPiles[card.myPlayer] });
+                    ret.Add(destroy);
                 }
             }
         }

@@ -4,28 +4,24 @@ using UnityEngine;
 
 public class Xen : CharacterCard
 {
-    public new string onReveal(Board b)
+    public new List<GameNotification> getResponse(GameNotification note)
     {
-        CharacterCard muse = null;
-        foreach (Lane lane in b.lanes)
-        {
-            foreach (CharacterCard card in lane.segments[myPlayer])
-            {
-                if (card.revealed && (muse == null || muse.getPower(b) < card.getPower(b)))
-                {
-                    muse = card;
-                }
-            }
-        }
-        if (muse == null)
+        if (!isMyOnReveal(note))
         {
             return null;
         }
-        setBasePower(muse.basePower);
-        changePermanentPower(muse.permanentAlterPower);
-        changeTemporaryPower(muse.temporaryAlterPower);
-        attributes = new List<Attribute>();
-        attributes.AddRange(muse.attributes);
-        return $"Player {myPlayer}'s {characterName} mimics their {muse.characterName}'s Power and Attributes.\n";
+        CharacterCard last = StaticData.board.archive.playedCards[myPlayer][StaticData.board.archive.playedCards[myPlayer].Count - 1];
+        if (last != null && last.positionState is LaneSegment)
+        {
+            List<GameNotification> ret = new List<GameNotification>();
+            GameNotification alter = new GameNotification(GameNotification.Nature.PERM_ALTER_POWER, true, this);
+            alter.setCards(new CharacterCard[] { this });
+            alter.setInts(new int[] { last.getPermanentPower() - getPermanentPower() });
+            ret.Add(alter);
+
+            return ret;
+        }
+
+        return null;
     }
 }

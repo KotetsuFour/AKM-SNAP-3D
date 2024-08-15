@@ -5,21 +5,31 @@ using UnityEngine;
 public class EarthBoy : CharacterCard
 {
     [SerializeField] private CharacterCard rock;
-    public new string onReveal(Board b)
+
+    public new List<GameNotification> getResponse(GameNotification note)
     {
-        string ret = "";
-        Lane lane = b.getMyLane(this);
+        if (!isMyOnReveal(note))
+        {
+            return null;
+        }
+
+        List<GameNotification> ret = new List<GameNotification>();
+        Lane lane = ((LaneSegment)positionState).lane;
         for (int q = 0; q < lane.segments.Count; q++)
         {
-            if (q != myPlayer)
+            LaneSegment seg = lane.segments[q];
+            if (seg == positionState || seg.isFull())
             {
-                if (lane.segments[q].Count < lane.cardsPerPlayerInThisLane)
-                {
-                    b.addToLane(lane, Instantiate(rock), q);
-                    ret += $"Player {myPlayer}'s {characterName} added a Rock to Player {q}'s side.\n";
-                }
+                continue;
             }
+            GameNotification create = new GameNotification(GameNotification.Nature.CREATE_CARD, true, this);
+            create.setCards(new CharacterCard[] { rock });
+            create.setPositions(new PositionState[] { seg });
+            create.setInts(new int[] { q });
+
+            ret.Add(create);
         }
+
         return ret;
     }
 }

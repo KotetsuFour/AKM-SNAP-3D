@@ -35,5 +35,9 @@ public class NotificationHandler : MonoBehaviour
     {
         return true;
     }
+    public bool animate(GameNotification note)
+    {
+        return true;
+    }
 
 }

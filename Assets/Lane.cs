@@ -73,13 +73,4 @@ public class Lane : MonoBehaviour
         }
         return ret;
     }
-
-    public bool allowNotification(GameNotification note)
-    {
-        return location == null || location.allowNotification(note);
-    }
-    public List<GameNotification> getResponse(GameNotification note)
-    {
-        return location == null ? null : location.getResponse(note);
-    }
 }

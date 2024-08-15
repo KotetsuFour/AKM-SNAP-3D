@@ -37,10 +37,13 @@ public class LucidLilah : CharacterCard
                 else if (StaticData.board.turn == 3)
                 {
                     Lane moveTo = StaticData.board.oneLaneToTheRight(((LaneSegment)target.positionState).lane);
-                    GameNotification effect = new GameNotification(GameNotification.Nature.RELOCATE_CARD, true, this);
-                    effect.setCards(new CharacterCard[] { target });
-                    effect.setPositions(new PositionState[] { target.positionState, moveTo.segments[target.myPlayer] });
-                    ret.Add(effect);
+                    if (moveTo != null)
+                    {
+                        GameNotification effect = new GameNotification(GameNotification.Nature.RELOCATE_CARD, true, this);
+                        effect.setCards(new CharacterCard[] { target });
+                        effect.setPositions(new PositionState[] { target.positionState, moveTo.segments[target.myPlayer] });
+                        ret.Add(effect);
+                    }
                 }
                 else if (StaticData.board.turn == 4)
                 {
@@ -60,6 +63,7 @@ public class LucidLilah : CharacterCard
                     GameNotification effect = new GameNotification(GameNotification.Nature.CREATE_CARD, true, this);
                     effect.setCards(new CharacterCard[] { bloodyLilah });
                     effect.setPositions(new PositionState[] { StaticData.board.hands[myPlayer] });
+                    effect.setInts(new int[] { myPlayer });
                     ret.Add(effect);
                 }
                 else if (StaticData.board.turn == 7)

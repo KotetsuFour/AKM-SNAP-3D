@@ -23,6 +23,8 @@ public abstract class CharacterCard : NotificationHandler
     public PositionState positionState;
     public int turnPlayed;
     public bool revealed;
+    public float ongoingMultiplier;
+    public bool canMove;
     public int getPower(Board b)
     {
         return getPermanentPower() + temporaryAlterPower;
@@ -34,10 +36,6 @@ public abstract class CharacterCard : NotificationHandler
     public int getPermanentPower()
     {
         return basePower + permanentAlterPower;
-    }
-    public int getCost(Board b, Lane lane)
-    {
-        return baseCost + permanentAlterCost + temporaryAlterCost;
     }
     public int getCost(Board b)
     {
@@ -74,8 +72,17 @@ public abstract class CharacterCard : NotificationHandler
     }
     public bool isMyOnReveal(GameNotification note)
     {
-        return note.getNature() == GameNotification.Nature.REVEAL_CARD
+        return note.getNature() == GameNotification.Nature.ON_REVEAL
             && note.getCharacterCards()[0] == this;
+    }
+    public bool isMyOngoing(GameNotification note)
+    {
+        return note.getNature() == GameNotification.Nature.ONGOING
+            && note.getCharacterCards()[0] == this;
+    }
+    public bool isOnMySideOfTheField(CharacterCard card)
+    {
+        return card.positionState is LaneSegment && ((LaneSegment)card.positionState).lane.segments.IndexOf((LaneSegment)card.positionState) == myPlayer;
     }
     public enum Series
     {
@@ -89,22 +96,16 @@ public abstract class CharacterCard : NotificationHandler
         COMICS_ACADEMY
     }
 
-    private void Update()
+    public void setToUnrevealedPosition()
     {
-        if (SceneManager.GetActiveScene().name == "CardGame")
-        {
-            Board board = GameObject.Find("Board").GetComponent<Board>();
-            StaticData.findDeepChild(transform, "ShowCost").GetComponent<TextMeshProUGUI>()
-                .text = "" + getCost(board);
-            StaticData.findDeepChild(transform, "ShowPower").GetComponent<TextMeshProUGUI>()
-                .text = "" + getPower(board);
-        }
-        else
-        {
-            StaticData.findDeepChild(transform, "ShowCost").GetComponent<TextMeshProUGUI>()
-                .text = "" + getCost();
-            StaticData.findDeepChild(transform, "ShowPower").GetComponent<TextMeshProUGUI>()
-                .text = "" + getPower();
-        }
+        transform.rotation = Quaternion.Euler(180, 0, 0);
+    }
+    public void setToRevealedPosition()
+    {
+        transform.rotation = Quaternion.Euler(0, 0, 0);
+    }
+    public void updatePowerAndCostDisplay()
+    {
+
     }
 }

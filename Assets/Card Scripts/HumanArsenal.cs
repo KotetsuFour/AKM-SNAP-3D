@@ -4,21 +4,30 @@ using UnityEngine;
 
 public class HumanArsenal : CharacterCard
 {
-    public new string onReveal(Board b)
+    [SerializeField] private int bonus;
+    public new List<GameNotification> getResponse(GameNotification note)
     {
-        Lane lane = b.getMyLane(this);
-        for (int q = 0; q < lane.segments.Count; q++)
+        if (!isMyOnReveal(note))
         {
-            if (q == myPlayer)
+            return null;
+        }
+        List<GameNotification> ret = new List<GameNotification>();
+        Lane lane = ((LaneSegment)positionState).lane;
+        foreach (LaneSegment seg in lane.segments)
+        {
+            if (seg == positionState)
             {
                 continue;
             }
-            for (int w = 0; w < lane.segments[q].Count; w++)
+            foreach (CharacterCard card in seg.cardsHere)
             {
-                if (lane.segments[q][w].attributes.Contains(Attribute.INNATE_MAGIC))
+                if (card.attributes.Contains(Attribute.INNATE_MAGIC))
                 {
-                    changePermanentPower(3);
-                    return $"Player {myPlayer}'s {characterName} detected Player {q}'s {lane.segments[q][w].characterName} and gained 3 Power.\n";
+                    GameNotification buff = new GameNotification(GameNotification.Nature.PERM_ALTER_POWER, true, this);
+                    buff.setCards(new CharacterCard[] { this });
+                    buff.setInts(new int[] { bonus });
+                    ret.Add(buff);
+                    return ret;
                 }
             }
         }

@@ -4,15 +4,28 @@ using UnityEngine;
 
 public class QueenOfClovers : CharacterCard
 {
-    public new int getCost(Board board, Lane lane)
+    [SerializeField] private int summonCost;
+    public new List<GameNotification> getResponse(GameNotification note)
     {
-        foreach (CharacterCard c in lane.segments[myPlayer])
+        if (!isMyOnReveal(note))
         {
-            if (c.characterName == "Narkio")
-            {
-                return baseCost + permanentAlterCost + temporaryAlterCost - 1;
-            }
+            return null;
         }
-        return baseCost + permanentAlterCost + temporaryAlterCost;
+        List<GameNotification> ret = new List<GameNotification>();
+        foreach (Lane lane in StaticData.board.lanes)
+        {
+            if (lane == ((LaneSegment)positionState).lane
+                || !lane.players.Contains(myPlayer)
+                || lane.segments[myPlayer].isFull())
+            {
+                continue;
+            }
+            GameNotification summon = new GameNotification(GameNotification.Nature.CREATE_CARD, true, this);
+            summon.setCards(new CharacterCard[] { StaticData.getRandomCostCard(summonCost) });
+            summon.setPositions(new PositionState[] { lane.segments[myPlayer] });
+            summon.setInts(new int[] { myPlayer });
+            ret.Add(summon);
+        }
+        return ret;
     }
 }

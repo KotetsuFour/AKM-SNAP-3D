@@ -44,11 +44,11 @@ public class GameNotification
     {
         positionStateVals = vals;
     }
-    public bool allow()
+    public void allow()
     {
         if (!disputable)
         {
-            return true;
+            stage = Stage.ANIMATING;
         }
         permissionsQueue = new List<Permission>();
         List<NotificationHandler> handlers = StaticData.board.getAllPermissionNeeded();
@@ -77,12 +77,159 @@ public class GameNotification
         {
             permissionsQueue[q].deny();
         }
-        return !denied;
+        if (!denied)
+        {
+            stage = Stage.ANIMATING;
+        }
+        stage = Stage.DENIED;
+    }
+    public void animate()
+    {
+        if (getCause() == null || getCause().animate(this))
+        {
+            stage = Stage.ACTING;
+        }
     }
     public void act()
     {
-        stage = Stage.ACTING;
-        //TODO the action
+        if (getNature() == Nature.ALTER_COST)
+        {
+            CharacterCard subject = getCharacterCards()[0];
+            subject.changeCost(getInts()[0]);
+        }
+        else if (getNature() == Nature.ALTER_ONGOING)
+        {
+            CharacterCard subject = getCharacterCards()[0];
+            subject.ongoingMultiplier *= getInts()[0];
+        }
+        else if (getNature() == Nature.CHANGE_LOCATION)
+        {
+            Location old = getLocations()[0];
+            Lane lane = old.lane;
+            Object.Destroy(old);
+            Location newLoc = Object.Instantiate(getLocations()[1]);
+            getLocations()[1] = newLoc;
+            lane.setLocation(newLoc);
+
+            StaticData.board.calculateScores();
+        }
+        else if (getNature() == Nature.CREATE_CARD)
+        {
+            CharacterCard subject = Object.Instantiate(getCharacterCards()[0]);
+            getCharacterCards()[0] = subject;
+            getPositions()[0].addCard(subject);
+            subject.myPlayer = getInts()[0];
+
+            subject.updatePowerAndCostDisplay();
+            StaticData.board.calculateScores();
+        }
+        else if (getNature() == Nature.FINISH)
+        {
+            //nothing
+        }
+        else if (getNature() == Nature.GAME_END)
+        {
+            //nothing
+        }
+        else if (getNature() == Nature.GAME_START)
+        {
+            //nothing
+        }
+        else if (getNature() == Nature.ONGOING)
+        {
+            //nothing
+        }
+        else if (getNature() == Nature.ON_REVEAL)
+        {
+            //nothing
+        }
+        else if (getNature() == Nature.LOCATION_EFFECT)
+        {
+            //nothing
+        }
+        else if (getNature() == Nature.PERM_ALTER_POWER)
+        {
+            CharacterCard subject = getCharacterCards()[0];
+            subject.changePermanentPower(getInts()[0]);
+
+            subject.updatePowerAndCostDisplay();
+            StaticData.board.calculateScores();
+        }
+        else if (getNature() == Nature.PLAY_CARD)
+        {
+            CharacterCard subject = getCharacterCards()[0];
+            subject.setToUnrevealedPosition();
+        }
+        else if (getNature() == Nature.PLAY_PHASE)
+        {
+            //nothing
+            if (!StaticData.board.endPlayPhase)
+            {
+                return;
+            }
+            StaticData.board.endPlayPhase = false;
+        }
+        else if (getNature() == Nature.REGISTER_MOVE)
+        {
+            StaticData.board.calculateScores();
+        }
+        else if (getNature() == Nature.RELOCATE_CARD)
+        {
+            CharacterCard subject = getCharacterCards()[0];
+            PositionState from = getPositions()[0];
+            PositionState to = getPositions()[1];
+            if (!(from.isEmpty() || to.isFull()))
+            {
+                from.removeCard(subject);
+                to.addCard(subject);
+                subject.myPlayer = to.myPlayer;
+            }
+
+            StaticData.board.calculateScores();
+        }
+        else if (getNature() == Nature.REVEAL_CARD)
+        {
+            CharacterCard subject = getCharacterCards()[0];
+            subject.setToRevealedPosition();
+
+            StaticData.board.calculateScores();
+        }
+        else if (getNature() == Nature.SHUFFLE)
+        {
+            ((Deck)getPositions()[0]).shuffle();
+        }
+        else if (getNature() == Nature.STANDBY)
+        {
+            return;
+        }
+        else if (getNature() == Nature.TEMP_ALTER_POWER)
+        {
+            CharacterCard subject = getCharacterCards()[0];
+            subject.changeTemporaryPower(getInts()[0]);
+
+            subject.updatePowerAndCostDisplay();
+            StaticData.board.calculateScores();
+        }
+        else if (getNature() == Nature.TRANSFORM_CARD)
+        {
+            CharacterCard old = getCharacterCards()[0];
+            CharacterCard newCard = Object.Instantiate(getCharacterCards()[1]);
+            newCard.myPlayer = old.myPlayer;
+            getCharacterCards()[1] = newCard;
+            old.positionState.replaceCard(old, newCard);
+            Object.Destroy(old);
+
+            StaticData.board.calculateScores();
+        }
+        else if (getNature() == Nature.TURN_END)
+        {
+            //nothing
+        }
+        else if (getNature() == Nature.TURN_START)
+        {
+            //nothing
+        }
+        stage = Stage.COMPLETED;
     }
 
     public bool isDisputable()
@@ -115,14 +262,14 @@ public class GameNotification
     }
     public enum Nature
     {
-        GAME_START, TURN_START, PLAY_PHASE, TURN_END, GAME_END, FINISH, STANDBY, PLAY_CARD,
-        REVEAL_LOCATION, REVEAL_CARD, REGISTER_MOVE, ON_REVEAL, ONGOING, OTHER_EFFECT, SETTLE_CARD,
+        GAME_START, TURN_START, PLAY_PHASE, TURN_END, GAME_END, FINISH, STANDBY, PLAY_CARD, SHUFFLE,
+        REVEAL_CARD, REGISTER_MOVE, ON_REVEAL, ONGOING, LOCATION_EFFECT,
         PERM_ALTER_POWER, TEMP_ALTER_POWER, ALTER_COST,
-        CREATE_CARD, RELOCATE_CARD, CHANGE_LOCATION, ALTER_ONREVEAL, ALTER_ONGOING, TRANSFORM_CARD
+        CREATE_CARD, RELOCATE_CARD, CHANGE_LOCATION, ALTER_ONGOING, TRANSFORM_CARD
     }
     public enum Stage
     {
-        PERMISSION, ACTING, COMPLETED
+        PERMISSION, ANIMATING, ACTING, COMPLETED, DENIED
     }
 
     public class Permission
@@ -179,10 +326,8 @@ public class GameNotification
     }
     public static void move(CharacterCard card, PositionState origin, PositionState dest)
     {
-        origin.cardsHere.Remove(card);
-        dest.cardsHere.Add(card);
-        origin.updateCardPositions();
-        dest.updateCardPositions();
+        origin.removeCard(card);
+        dest.addCard(card);
     }
     public static void changeLocation(LaneSegment seg, Location loc)
     {

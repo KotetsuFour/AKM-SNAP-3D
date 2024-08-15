@@ -7,6 +7,8 @@ using UnityEngine.SceneManagement;
 
 public class Board : MonoBehaviour
 {
+    [SerializeField] private Camera cam;
+
     [SerializeField] private Lane twoPlayerLeftLane;
     [SerializeField] private Lane twoPlayerMiddleLane;
     [SerializeField] private Lane twoPlayerRightLane;
@@ -15,6 +17,8 @@ public class Board : MonoBehaviour
     [SerializeField] private Lane threePlayerMiddleLane;
     [SerializeField] private Lane threePlayerRightLane;
     [SerializeField] private Lane threePlayerTopLane;
+
+    [SerializeField] private UnrevealedLocation unrevealed;
 
     public Lane leftLane;
     public Lane middleLane;
@@ -48,14 +52,16 @@ public class Board : MonoBehaviour
     private SelectionMode selectionMode;
     // Start is called before the first frame update
 
+    private bool donePlaying;
     private PlayerConnector connector;
     private List<int> myActions;
-    private List<CharacterCard> myCardsToReveal;
-    private List<CharacterCard> myMovedCards;
-    public List<CharacterCard> cardsToReveal;
     private int[] turnOrder;
 
     private LinkedList<GameNotification> actionQueue;
+
+    public GameArchive archive;
+
+    public bool endPlayPhase;
 
     public List<NotificationHandler> getAllReactors()
     {
@@ -100,6 +106,8 @@ public class Board : MonoBehaviour
     }
     void Start()
     {
+        StaticData.board = this;
+
         GameObject found = GameObject.Find("Player Connector");
         if (found == null)
         {
@@ -113,7 +121,8 @@ public class Board : MonoBehaviour
             middleLane = Instantiate(twoPlayerMiddleLane);
             rightLane = Instantiate(twoPlayerRightLane);
             lanes = new Lane[] { leftLane, middleLane, rightLane };
-        } else if (StaticData.numPlayers == 3)
+        }
+        else if (StaticData.numPlayers == 3)
         {
             leftLane = Instantiate(threePlayerLeftLane);
             middleLane = Instantiate(threePlayerMiddleLane);
@@ -121,12 +130,6 @@ public class Board : MonoBehaviour
             topLane = Instantiate(threePlayerTopLane);
             lanes = new Lane[] { leftLane, middleLane, rightLane, topLane };
         }
-
-        initialize();
-    }
-    public void initialize()
-    {
-        StaticData.board = this;
 
         energies = new List<int>();
         extraEnergies = new List<int>();
@@ -136,22 +139,12 @@ public class Board : MonoBehaviour
             extraEnergies.Add(0);
         }
 
-        startOfTurn();
+        archive = new GameArchive();
 
         GameNotification start = new GameNotification(GameNotification.Nature.GAME_START, false, null);
         actionQueue.AddLast(start);
-        for (int q = 0; q < StaticData.numPlayers; q++)
-        {
-            for (int w = 0; w < 3; w++)
-            {
-                GameNotification draw = new GameNotification(GameNotification.Nature.RELOCATE_CARD, false, null);
-                draw.setCards(new CharacterCard[] { decks[q].topCard() });
-                draw.setPositions(new PositionState[] { decks[q], hands[q] });
-                actionQueue.AddLast(draw);
-            }
-        }
-    }
 
+    }
     public Lane oneLaneToTheRight(Lane lane)
     {
         if (StaticData.numPlayers == 2)
@@ -199,20 +192,6 @@ public class Board : MonoBehaviour
         }
         return null;
     }
-    public void startOfTurn()
-    {
-        //Increment the turn and refresh actions
-        turn++;
-        myActions = new List<int>();
-        myActions.Add(turn);
-
-        //Set energy
-        for (int q = 0; q < StaticData.numPlayers; q++)
-        {
-            energies[q] = turn + extraEnergies[q];
-            extraEnergies[q] = 0;
-        }
-    }
     // Update is called once per frame
     void Update()
     {
@@ -220,29 +199,56 @@ public class Board : MonoBehaviour
         GameNotification currentAction = actionQueue.First.Value;
         if (currentAction.getStage() == GameNotification.Stage.PERMISSION)
         {
-            if (currentAction.allow())
-            {
-                currentAction.act();
-            }
+            currentAction.allow();
+        }
+        else if (currentAction.getStage() == GameNotification.Stage.ANIMATING)
+        {
+            currentAction.animate();
+        }
+        else if (currentAction.getStage() == GameNotification.Stage.ACTING)
+        {
+            currentAction.act();
+        }
+        else if (currentAction.getStage() == GameNotification.Stage.DENIED)
+        {
+            actionQueue.RemoveFirst();
         }
         else if (currentAction.getStage() == GameNotification.Stage.COMPLETED)
         {
-            List<GameNotification> responses = new List<GameNotification>();
-            List<NotificationHandler> responders = getAllReactors();
-            foreach (NotificationHandler card in responders)
+            if (currentAction.getNature() == GameNotification.Nature.ON_REVEAL
+                || currentAction.getNature() == GameNotification.Nature.ONGOING
+                || currentAction.getNature() == GameNotification.Nature.LOCATION_EFFECT)
             {
-                List<GameNotification> response = card.getResponse(currentAction);
-                if (response != null)
+                List<GameNotification> responses = currentAction.getCause().getResponse(currentAction);
+                LinkedListNode<GameNotification> after = actionQueue.First;
+                foreach (GameNotification note in responses)
                 {
-                    responses.AddRange(response);
+                    actionQueue.AddAfter(after, note);
+                    after = after.Next;
                 }
+                actionQueue.RemoveFirst();
             }
-            foreach (GameNotification note in responses)
+            else
             {
-                actionQueue.AddAfter(actionQueue.First, note);
+                List<GameNotification> responses = new List<GameNotification>();
+                List<NotificationHandler> responders = getAllReactors();
+                foreach (NotificationHandler card in responders)
+                {
+                    List<GameNotification> response = card.getResponse(currentAction);
+                    if (response != null)
+                    {
+                        responses.AddRange(response);
+                    }
+                }
+                LinkedListNode<GameNotification> after = actionQueue.First;
+                foreach (GameNotification note in responses)
+                {
+                    actionQueue.AddAfter(after, note);
+                    after = after.Next;
+                }
+                processNotification();
+                actionQueue.RemoveFirst();
             }
-            processNotification();
-            actionQueue.RemoveFirst();
         }
 
         //Update energy display
@@ -256,99 +262,149 @@ public class Board : MonoBehaviour
             {
                 playUI.SetActive(true);
                 cardExaminer.SetActive(false);
-                RaycastHit2D hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(Input.mousePosition),
-                    Vector2.zero, float.MaxValue, cardLayer);
-                if (hit.collider != null)
+
+                //If you clicked a card, it becomes the selectedCard
+                RaycastHit hit;
+                if (Physics.Raycast(cam.ScreenPointToRay(Input.mousePosition), out hit, float.MaxValue, cardLayer))
                 {
                     if (selectedCard != null)
                     {
                         selectedCard.GetComponent<SpriteRenderer>().color = Color.white;
                         selectedCard = null;
                     }
-                    CharacterCard thisCard = hit.collider.GetComponent<CharacterCard>();
-                    if (hands[StaticData.player].cardsHere.Contains(thisCard))
+                    selectedCard = hit.collider.GetComponent<CharacterCard>();
+                    selectedCard.GetComponent<SpriteRenderer>().color = Color.cyan;
+                    //TODO reveal the examine button
+                }
+                //If you clicked a lane
+                else if (Physics.Raycast(cam.ScreenPointToRay(Input.mousePosition), out hit, float.MaxValue, positionLayer))
+                {
+                    if (selectedCard != null)
                     {
-                        selectedCard = thisCard;
-                        selectedCard.GetComponent<SpriteRenderer>().color = Color.cyan;
+                        selectedCard.GetComponent<SpriteRenderer>().color = Color.white;
+                        if (hit.collider != null)
+                        {
+                            Lane lane = hit.collider.GetComponent<Lane>();
+                            //Check to play card
+                            if (!donePlaying
+                                && hands[StaticData.player].cardsHere.Contains(selectedCard)
+                                && lane.players.Contains(StaticData.player)
+                                && !lane.segments[StaticData.player].isFull()
+                                && lane.segments[StaticData.player] != selectedCard.positionState
+                                && energies[StaticData.player] >= selectedCard.getCost(this))
+                            {
+                                List<NotificationHandler> checks = getAllPermissionNeeded();
+                                bool allowed = true;
+                                foreach (NotificationHandler check in checks)
+                                {
+                                    if (!check.allowPlaceCard(selectedCard, lane.segments[StaticData.player]))
+                                    {
+                                        allowed = false;
+                                        break;
+                                    }
+                                }
+                                if (allowed)
+                                {
+                                    myActions.Add(0);
+                                    myActions.Add(hands[StaticData.player].cardsHere.IndexOf(selectedCard));
+                                    for (int q = 0; q < lanes.Length; q++)
+                                    {
+                                        if (lanes[q] == lane)
+                                        {
+                                            myActions.Add(q);
+                                            break;
+                                        }
+                                    }
+                                    energies[StaticData.player] -= selectedCard.getCost(this);
+                                    hands[StaticData.player].removeCardTentatively(selectedCard);
+                                    lane.segments[StaticData.player].addCardTentatively(selectedCard);
+                                    selectedCard.turnPlayed = turn;
+                                }
+                            }
+                            //Check to move card
+                            else if (!donePlaying
+                                && selectedCard.positionState is LaneSegment
+                                && selectedCard.myPlayer == StaticData.player
+                                && selectedCard.canMove
+                                && !lane.segments[StaticData.player].isFull()
+                                && lane.segments[StaticData.player] != selectedCard.positionState)
+                            {
+                                List<NotificationHandler> checks = getAllPermissionNeeded();
+                                bool allowed = true;
+                                foreach (NotificationHandler check in checks)
+                                {
+                                    if (!check.allowMoveCard(selectedCard, (LaneSegment)selectedCard.positionState, lane.segments[StaticData.player]))
+                                    {
+                                        allowed = false;
+                                        break;
+                                    }
+                                }
+                                if (allowed)
+                                {
+                                    myActions.Add(1);
+                                    for (int q = 0; q < lanes.Length; q++)
+                                    {
+                                        if (lanes[q] == ((LaneSegment)selectedCard.positionState))
+                                        {
+                                            myActions.Add((q * StaticData.numCardsPerLane)
+                                                + selectedCard.positionState.cardsHere.Count
+                                                + selectedCard.positionState.tentativeCards.Count);
+                                            break;
+                                        }
+                                    }
+                                    for (int q = 0; q < lanes.Length; q++)
+                                    {
+                                        if (lanes[q] == lane)
+                                        {
+                                            myActions.Add(q);
+                                            break;
+                                        }
+                                    }
+                                    selectedCard.positionState.removeCardTentatively(selectedCard);
+                                    lane.segments[StaticData.player].addCardTentatively(selectedCard);
+                                }
+                            }
+                        }
                     }
                 }
                 else
                 {
-                    hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(Input.mousePosition),
-                        Vector2.zero, float.MaxValue, positionLayer);
-                    if (hit.collider != null && selectedCard != null)
-                    {
-                        Lane lane = hit.collider.GetComponent<Lane>();
-                        if (lane.players.Contains(StaticData.player)
-                            && lane.segments[StaticData.player].cardsHere.Count < lane.segments[StaticData.player].maxCardsAllowed
-                            && energies[StaticData.player] >= selectedCard.getCost(this, lane))
-                        {
-                            List<NotificationHandler> checks = getAllReactors();
-                            bool allowed = true;
-                            foreach (NotificationHandler check in checks)
-                            {
-                                allowed = allowed && check.allowPlaceCard(selectedCard, lane.segments[StaticData.player]);
-                            }
-                            if (allowed)
-                            {
-                                myActions.Add(0);
-                                myActions.Add(hands[StaticData.player].cardsHere.IndexOf(selectedCard));
-                                for (int q = 0; q < lanes.Length; q++)
-                                {
-                                    if (lanes[q] == lane)
-                                    {
-                                        myActions.Add(q);
-                                        break;
-                                    }
-                                }
-                                energies[StaticData.player] -= selectedCard.getCost(this, lane);
-                                hands[StaticData.player].cardsHere.Remove(selectedCard);
-                                selectedCard.turnPlayed = turn;
-                            }
-                        }
-                        selectedCard.GetComponent<SpriteRenderer>().color = Color.white;
-                    }
-                    else if (selectedCard != null)
-                    {
-                        selectedCard.GetComponent<SpriteRenderer>().color = Color.white;
-                        selectedCard = null;
-                    }
+                    selectedCard = null;
+                    //TODO hide examine button
                 }
             }
         }
-        else if (Input.GetKeyDown(KeyCode.Mouse1))
+    }
+
+    public void examine()
+    {
+        if (selectedCard != null)
         {
-            RaycastHit2D hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(Input.mousePosition),
-                Vector2.zero, float.MaxValue, cardLayer);
-            if (hit.collider != null)
+            CharacterCard thisCard = selectedCard;
+            Debug.Log(thisCard);
+            playUI.SetActive(false);
+            cardExaminer.SetActive(true);
+            StaticData.findDeepChild(cardExaminer.transform, "DisplayCard").GetComponent<Image>()
+                .sprite = thisCard.GetComponent<SpriteRenderer>().sprite;
+            StaticData.findDeepChild(cardExaminer.transform, "Info1")
+                .GetComponent<TextMeshProUGUI>().text = $"Cost: {thisCard.getCost(this)} (Base: {thisCard.baseCost})" +
+                $"\nPower: {thisCard.getPower(this)} (Base: {thisCard.basePower})" +
+                $"\n\nSeries: {thisCard.series}";
+            string attList = "Attributes:";
+            for (int q = 0; q < thisCard.attributes.Count; q++)
             {
-                Debug.Log(hit.collider.name);
-                CharacterCard thisCard = hit.collider.GetComponent<CharacterCard>();
-                Debug.Log(thisCard);
-                playUI.SetActive(false);
-                cardExaminer.SetActive(true);
-                StaticData.findDeepChild(cardExaminer.transform, "DisplayCard").GetComponent<Image>()
-                    .sprite = thisCard.GetComponent<SpriteRenderer>().sprite;
-                StaticData.findDeepChild(cardExaminer.transform, "Info1")
-                    .GetComponent<TextMeshProUGUI>().text = $"Cost: {thisCard.getCost(this)} (Base: {thisCard.baseCost})" +
-                    $"\nPower: {thisCard.getPower(this)} (Base: {thisCard.basePower})" +
-                    $"\n\nSeries: {thisCard.series}";
-                string attList = "Attributes:";
-                for (int q = 0; q < thisCard.attributes.Count; q++)
+                attList += " " + thisCard.attributes[q];
+                if (q < thisCard.attributes.Count - 1)
                 {
-                    attList += " " + thisCard.attributes[q];
-                    if (q < thisCard.attributes.Count - 1)
-                    {
-                        attList += ",";
-                    }
+                    attList += ",";
                 }
-                StaticData.findDeepChild(cardExaminer.transform, "Info2").GetComponent<TextMeshProUGUI>()
-                    .text = attList;
-                StaticData.findDeepChild(cardExaminer.transform, "CardName").GetComponent<TextMeshProUGUI>()
-                    .text = thisCard.characterName;
-                StaticData.findDeepChild(cardExaminer.transform, "Ability").GetComponent<TextMeshProUGUI>()
-                    .text = thisCard.abilityDescription;
             }
+            StaticData.findDeepChild(cardExaminer.transform, "Info2").GetComponent<TextMeshProUGUI>()
+                .text = attList;
+            StaticData.findDeepChild(cardExaminer.transform, "CardName").GetComponent<TextMeshProUGUI>()
+                .text = thisCard.characterName;
+            StaticData.findDeepChild(cardExaminer.transform, "Ability").GetComponent<TextMeshProUGUI>()
+                .text = thisCard.abilityDescription;
         }
     }
 
@@ -367,19 +423,16 @@ public class Board : MonoBehaviour
         if (actionType == 0)
         {
             LaneSegment segment = lanes[lanePlayed].segments[StaticData.player];
-            CharacterCard cardPlayed = segment.cardsHere[segment.cardsHere.Count - 1];
-            lanes[lanePlayed].segments[StaticData.player].cardsHere.Remove(cardPlayed);
-            hands[StaticData.player].cardsHere.Insert(handPos, cardPlayed);
-            lanes[lanePlayed].segments[StaticData.player].updateCardPositions();
-            hands[StaticData.player].updateCardPositions();
+            CharacterCard cardPlayed = segment.tentativeCards[segment.tentativeCards.Count - 1];
+            segment.undoTentativeAdd();
+            hands[StaticData.player].undoTentativeRemove();
             cardPlayed.turnPlayed = 0;
         } else if (actionType == 1)
         {
-            //TODO
             LaneSegment backFrom = lanes[lanePlayed].segments[StaticData.player];
-            LaneSegment backTo = lanes[handPos / 4].segments[StaticData.player];
-            CharacterCard cardPlayed = backFrom.cardsHere[backFrom.cardsHere.Count - 1];
-            GameNotification.move(cardPlayed, backFrom, backTo);
+            LaneSegment backTo = lanes[handPos / StaticData.numCardsPerLane].segments[StaticData.player];
+            backFrom.undoTentativeAdd();
+            backTo.undoTentativeRemove();
         }
     }
 
@@ -388,68 +441,30 @@ public class Board : MonoBehaviour
         GameNotification note = actionQueue.First.Value;
         if (note.getNature() == GameNotification.Nature.GAME_START)
         {
+            for (int q = 0; q < StaticData.numPlayers; q++)
+            {
+                for (int w = 0; w < 3; w++)
+                {
+                    GameNotification draw = new GameNotification(GameNotification.Nature.RELOCATE_CARD, false, null);
+                    draw.setCards(new CharacterCard[] { decks[q].cardsHere[decks[q].cardsHere.Count - (1 + w)] });
+                    draw.setPositions(new PositionState[] { decks[q], hands[q] });
+                    actionQueue.AddLast(draw);
+                }
+            }
             actionQueue.AddLast(new GameNotification(GameNotification.Nature.TURN_START, false, null));
         }
         else if (note.getNature() == GameNotification.Nature.TURN_START)
         {
-            //Reveal locations
-            if (StaticData.numPlayers == 2)
+            //Increment the turn and refresh actions
+            turn++;
+            myActions = new List<int>();
+            myActions.Add(turn);
+
+            //Set energy
+            for (int q = 0; q < StaticData.numPlayers; q++)
             {
-                if (turn == 1 && leftLane.location == null)
-                {
-                    GameNotification reveal = new GameNotification(GameNotification.Nature.CHANGE_LOCATION, false, null);
-                    reveal.setPositions(new PositionState[] { leftLane.segments[0] });
-                    reveal.setLocations(new Location[] { StaticData.allLocations[Random.Range(0, StaticData.allLocations.Count)] });
-                    actionQueue.AddLast(reveal);
-                }
-                else if (turn == 2 && middleLane.location == null)
-                {
-                    GameNotification reveal = new GameNotification(GameNotification.Nature.CHANGE_LOCATION, false, null);
-                    reveal.setPositions(new PositionState[] { middleLane.segments[0] });
-                    reveal.setLocations(new Location[] { StaticData.allLocations[Random.Range(0, StaticData.allLocations.Count)] });
-                    actionQueue.AddLast(reveal);
-                }
-                else if (turn == 3 && rightLane.location == null)
-                {
-                    GameNotification reveal = new GameNotification(GameNotification.Nature.CHANGE_LOCATION, false, null);
-                    reveal.setPositions(new PositionState[] { rightLane.segments[0] });
-                    reveal.setLocations(new Location[] { StaticData.allLocations[Random.Range(0, StaticData.allLocations.Count)] });
-                    actionQueue.AddLast(reveal);
-                }
-            }
-            else if (StaticData.numPlayers == 3)
-            {
-                if (turn == 1)
-                {
-                    if (leftLane.location == null)
-                    {
-                        GameNotification reveal = new GameNotification(GameNotification.Nature.CHANGE_LOCATION, false, null);
-                        reveal.setPositions(new PositionState[] { leftLane.segments[0] });
-                        reveal.setLocations(new Location[] { StaticData.allLocations[Random.Range(0, StaticData.allLocations.Count)] });
-                        actionQueue.AddLast(reveal);
-                    }
-                    if (rightLane.location == null)
-                    {
-                        GameNotification reveal = new GameNotification(GameNotification.Nature.CHANGE_LOCATION, false, null);
-                        reveal.setPositions(new PositionState[] { rightLane.segments[0] });
-                        reveal.setLocations(new Location[] { StaticData.allLocations[Random.Range(0, StaticData.allLocations.Count)] });
-                        actionQueue.AddLast(reveal);
-                    }
-                    if (topLane.location == null)
-                    {
-                        GameNotification reveal = new GameNotification(GameNotification.Nature.CHANGE_LOCATION, false, null);
-                        reveal.setPositions(new PositionState[] { topLane.segments[0] });
-                        reveal.setLocations(new Location[] { StaticData.allLocations[Random.Range(0, StaticData.allLocations.Count)] });
-                        actionQueue.AddLast(reveal);
-                    }
-                }
-                else if (turn == 3 && middleLane.location == null)
-                {
-                    GameNotification reveal = new GameNotification(GameNotification.Nature.CHANGE_LOCATION, false, null);
-                    reveal.setPositions(new PositionState[] { middleLane.segments[0] });
-                    reveal.setLocations(new Location[] { StaticData.allLocations[Random.Range(0, StaticData.allLocations.Count)] });
-                    actionQueue.AddLast(reveal);
-                }
+                energies[q] = turn + extraEnergies[q];
+                extraEnergies[q] = 0;
             }
 
             //Draw cards
@@ -466,61 +481,53 @@ public class Board : MonoBehaviour
         }
         else if (note.getNature() == GameNotification.Nature.PLAY_PHASE)
         {
-            LinkedListNode<GameNotification> afterMove = actionQueue.Last;
             for (int q = 0; q < turnOrder.Length; q++)
             {
-                if (turnOrder[q] == StaticData.player)
-                {
-                    foreach (CharacterCard card in myMovedCards)
-                    {
-                        GameNotification move = new GameNotification(GameNotification.Nature.REGISTER_MOVE, false, null);
-                        move.setCards(new CharacterCard[] { card });
-                        actionQueue.AddLast(move);
-                    }
-                    afterMove = actionQueue.Last;
-                    foreach (CharacterCard card in myCardsToReveal)
-                    {
-                        GameNotification move = new GameNotification(GameNotification.Nature.PLAY_CARD, false, null);
-                        move.setCards(new CharacterCard[] { card });
-                        move.setInts(new int[] { 0 });
-                        GameNotification reveal = new GameNotification(GameNotification.Nature.REVEAL_CARD, true, null);
-                        reveal.setCards(new CharacterCard[] { card });
-                        actionQueue.AddLast(reveal);
-                    }
-                    continue;
-                }
-                int[] actions = connector.playerActions[turnOrder[q]].Value;
+                int currentPlayer = turnOrder[q];
+                int[] actions = connector.playerActions[currentPlayer].Value;
                 for (int w = 1; w < actions.Length; w += 3)
                 {
                     if (actions[w] == 0)
                     {
-                        CharacterCard card = hands[turnOrder[q]].cardsHere[actions[w + 1]];
+                        CharacterCard card = hands[currentPlayer].cardsHere[actions[w + 1]];
+                        LaneSegment dest = lanes[actions[w + 2]].segments[currentPlayer];
                         GameNotification move = new GameNotification(GameNotification.Nature.PLAY_CARD, false, null);
                         move.setCards( new CharacterCard[] { card });
-                        move.setPositions(new PositionState[] { hands[turnOrder[q]], lanes[actions[w + 2]].segments[turnOrder[q]] });
-                        move.setInts(new int[] { 1 });
-                        actionQueue.AddAfter(afterMove, move);
-                        afterMove = afterMove.Next;
-                        //TODO unreveal card
-                        cardsToReveal.Add(card);
+                        if (currentPlayer != StaticData.player)
+                        {
+                            hands[currentPlayer].removeCardTentatively(card);
+                            dest.addCardTentatively(card);
+                        }
+                        actionQueue.AddLast(move);
                         card.turnPlayed = turn;
-
-                        GameNotification reveal = new GameNotification(GameNotification.Nature.REVEAL_CARD, true, null);
-                        reveal.setCards(new CharacterCard[] { card });
-                        actionQueue.AddLast(reveal);
                     }
                     else if (actions[w] == 1)
                     {
                         CharacterCard card = lanes[actions[w + 1] / 4]
                             .segments[turnOrder[q]].cardsHere[actions[w + 1] % 4];
-                        GameNotification.move(card, lanes[actions[w + 1] / 4].segments[turnOrder[q]], lanes[actions[w + 2]].segments[turnOrder[q]]);
-
+                        LaneSegment moveFrom = lanes[actions[w + 1] / 4].segments[turnOrder[q]];
+                        LaneSegment moveTo = lanes[actions[w + 2]].segments[turnOrder[q]];
                         GameNotification move = new GameNotification(GameNotification.Nature.REGISTER_MOVE, false, null);
                         move.setCards(new CharacterCard[] { card });
-                        actionQueue.AddAfter(afterMove, move);
-                        afterMove = afterMove.Next;
+                        if (currentPlayer != StaticData.player)
+                        {
+                            moveFrom.removeCardTentatively(card);
+                            moveTo.addCardTentatively(card);
+                        }
+                        actionQueue.AddLast(move);
                     }
                 }
+            }
+            foreach (Lane lane in lanes)
+            {
+                foreach (LaneSegment seg in lane.segments)
+                {
+                    seg.finalizeTentatives();
+                }
+            }
+            foreach (PositionState hand in hands)
+            {
+                hand.finalizeTentatives();
             }
             actionQueue.AddLast(new GameNotification(GameNotification.Nature.TURN_END, false, null));
         }
@@ -543,6 +550,47 @@ public class Board : MonoBehaviour
         {
             //TODO Setup end screen
             actionQueue.AddLast(new GameNotification(GameNotification.Nature.STANDBY, false, null));
+        }
+        else if (note.getNature() == GameNotification.Nature.PLAY_CARD)
+        {
+            archive.playedCards[note.getCharacterCards()[0].myPlayer].Add(note.getCharacterCards()[0]);
+
+            GameNotification reveal = new GameNotification(GameNotification.Nature.REVEAL_CARD, true, null);
+            reveal.setCards(new CharacterCard[] { note.getCharacterCards()[0] });
+        }
+        else if (note.getNature() == GameNotification.Nature.REVEAL_CARD)
+        {
+            GameNotification reveal = new GameNotification(GameNotification.Nature.ON_REVEAL, true, null);
+            reveal.setCards(new CharacterCard[] { note.getCharacterCards()[0] });
+            actionQueue.AddAfter(actionQueue.First, reveal);
+        }
+        else if (note.getNature() == GameNotification.Nature.REGISTER_MOVE)
+        {
+            if (note.getCause() is CharacterCard)
+            {
+                if (note.getPositions()[0] is LaneSegment && note.getPositions()[1] is LaneSegment)
+                {
+                    archive.movedCards[((CharacterCard)note.getCause()).myPlayer]++;
+                }
+                else if (destroyedCardPiles.Contains(note.getPositions()[1]))
+                {
+                    archive.destroyedCards[((CharacterCard)note.getCause()).myPlayer]++;
+                }
+                else if (discardPiles.Contains(note.getPositions()[1]))
+                {
+                    archive.destroyedCards[((CharacterCard)note.getCause()).myPlayer]++;
+                }
+            }
+        }
+    }
+    public void calculateScores()
+    {
+        foreach (Lane lane in lanes)
+        {
+            foreach (LaneSegment seg in lane.segments)
+            {
+                seg.calculatePowers(this);
+            }
         }
     }
     public enum SelectionMode

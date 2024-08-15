@@ -4,39 +4,21 @@ using UnityEngine;
 
 public class Tavish : CharacterCard
 {
-    public new void changePermanentPower(int amount)
+    public new GameNotification.Permission allowNotification(GameNotification note)
     {
-        if (amount < 0)
+        if (
+            (note.getNature() == GameNotification.Nature.RELOCATE_CARD
+            && note.getCharacterCards()[0] == this
+            && note.getPositions()[0] is LaneSegment
+            )
+            ||
+            ((note.getNature() == GameNotification.Nature.PERM_ALTER_POWER || note.getNature() == GameNotification.Nature.TEMP_ALTER_POWER)
+            && note.getCharacterCards()[0] == this
+            && note.getInts()[0] < 0
+            ))
         {
-            return;
+            return new GameNotification.Permission(this, false);
         }
-        permanentAlterPower += amount;
+        return new GameNotification.Permission(this, true);
     }
-    public new void changeTemporaryPower(int amount)
-    {
-        if (amount < 0)
-        {
-            return;
-        }
-        temporaryAlterPower += amount;
-    }
-    public new void setBasePower(int p)
-    {
-        if (p < basePower)
-        {
-            return;
-        }
-        basePower = p;
-    }
-    public new void setBaseCost(int c)
-    {
-        baseCost = c;
-    }
-    public new void destroy(Board b, int player)
-    {
-        return;
-    }
-
-
-
 }

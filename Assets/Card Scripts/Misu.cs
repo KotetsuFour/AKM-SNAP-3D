@@ -4,22 +4,27 @@ using UnityEngine;
 
 public class Misu : CharacterCard
 {
-    public new string onReveal(Board b)
+    public new List<GameNotification> getResponse(GameNotification note)
     {
-        Lane lane = b.getMyLane(this);
-        int moveToPlayer = (myPlayer + 1) % lane.segments.Count;
-        while (moveToPlayer != myPlayer && lane.segments[moveToPlayer].Count >= lane.cardsPerPlayerInThisLane)
-        {
-            moveToPlayer = (moveToPlayer + 1) % lane.segments.Count;
-        }
-        if (moveToPlayer == myPlayer)
+        if (!isMyOnReveal(note))
         {
             return null;
         }
-        int startingPlayer = myPlayer;
-        lane.segments[myPlayer].Remove(this);
-        myPlayer = moveToPlayer;
-        b.addToLane(lane, this, moveToPlayer);
-        return $"Player {startingPlayer}'s {characterName} switched to Player {myPlayer}'s side.\n";
+        List<GameNotification> ret = new List<GameNotification>();
+
+        int dest = (myPlayer + 1) % StaticData.numPlayers;
+        while (((LaneSegment)positionState).lane.segments[dest].isFull()
+            && dest != myPlayer)
+        {
+            dest = (dest + 1) % StaticData.numPlayers;
+        }
+        if (dest != myPlayer)
+        {
+            GameNotification move = new GameNotification(GameNotification.Nature.RELOCATE_CARD, true, this);
+            move.setCards(new CharacterCard[] { this });
+            move.setPositions(new PositionState[] { positionState, ((LaneSegment)positionState).lane.segments[dest] });
+            ret.Add(move);
+        }
+        return ret;
     }
 }

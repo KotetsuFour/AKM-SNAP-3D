@@ -4,10 +4,18 @@ using UnityEngine;
 
 public class Tellie : CharacterCard
 {
-    public new string onReveal(Board b)
+    public new List<GameNotification> getResponse(GameNotification note)
     {
-        Lane lane = b.getMyLane(this);
-        lane.revealLocation();
-        return $"Player {myPlayer}'s {characterName} teleported this location to {lane.location.locationName}.\n";
+        if (!isMyOnReveal(note))
+        {
+            return null;
+        }
+        List<GameNotification> ret = new List<GameNotification>();
+
+        GameNotification change = new GameNotification(GameNotification.Nature.CHANGE_LOCATION, true, this);
+        change.setLocations(new Location[] { ((LaneSegment)positionState).lane.location, StaticData.getRandomLocation() });
+        ret.Add(change);
+
+        return ret;
     }
 }

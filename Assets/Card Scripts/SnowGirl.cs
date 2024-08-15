@@ -4,10 +4,20 @@ using UnityEngine;
 
 public class SnowGirl : CharacterCard
 {
-    public new string continuousEffect(Board b)
+    public new List<GameNotification> getResponse(GameNotification note)
     {
-        int extra = b.energies[myPlayer];
-        changePermanentPower(extra);
-        return $"Player {myPlayer}'s {characterName} gains {extra} Power from unspent energy.\n";
+        if (note.getNature() != GameNotification.Nature.TURN_END)
+        {
+            return null;
+        }
+        List<GameNotification> ret = new List<GameNotification>();
+
+        int bonus = StaticData.board.energies[myPlayer];
+        GameNotification buff = new GameNotification(GameNotification.Nature.PERM_ALTER_POWER, true, this);
+        buff.setCards(new CharacterCard[] { this });
+        buff.setInts(new int[] { bonus });
+        ret.Add(buff);
+
+        return ret;
     }
 }

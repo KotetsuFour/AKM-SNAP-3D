@@ -4,13 +4,23 @@ using UnityEngine;
 
 public class FireflyNew : CharacterCard
 {
-    public new string onReveal(Board b)
+    public new List<GameNotification> getResponse(GameNotification note)
     {
-        List<CharacterCard> myHand = b.hands[myPlayer];
-        for (int q = 0; q < myHand.Count; q++)
+        if (!isMyOnReveal(note))
         {
-            myHand[q].changeCost(-1);
+            return null;
         }
-        return $"Player {myPlayer}'s {characterName} reduced the cost of cards in their hand by 1.\n";
+        List<GameNotification> ret = new List<GameNotification>();
+
+        foreach (CharacterCard card in StaticData.board.hands[myPlayer].cardsHere)
+        {
+            if (card.getCost() > 1)
+            {
+                GameNotification decrease = new GameNotification(GameNotification.Nature.ALTER_COST, true, this);
+                decrease.setInts(new int[] { -1 });
+                ret.Add(decrease);
+            }
+        }
+        return ret;
     }
 }
