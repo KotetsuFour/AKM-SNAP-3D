@@ -4,9 +4,13 @@ using UnityEngine;
 
 public class CloverKingdom : Location
 {
-    public new bool canPlayHere(CharacterCard card, Board b)
+    [SerializeField] private int threshold;
+    public new bool allowPlaceCard(CharacterCard card, LaneSegment seg)
     {
-        int cost = card.getCost(b, lane);
-        return cost <= 3;
+        if (seg.lane == lane && card.getCost() > threshold)
+        {
+            return false;
+        }
+        return true;
     }
 }

@@ -6,6 +6,7 @@ public class Bartora : CharacterCard
 {
     private int completionThreshold;
     private int followThrough;
+    [SerializeField] private int bonus;
     public new List<GameNotification> getResponse(GameNotification note)
     {
         List<GameNotification> ret = new List<GameNotification>();
@@ -22,11 +23,12 @@ public class Bartora : CharacterCard
                 followThrough++;
                 GameNotification increase = new GameNotification(GameNotification.Nature.PERM_ALTER_POWER,
                     true, this);
-                increase.setInts(new int[] { 9 });
+                increase.setInts(new int[] { bonus });
                 ret.Add(increase);
             }
         }
-        else if (note.getNature() == GameNotification.Nature.RELOCATE_CARD)
+        else if (note.getNature() == GameNotification.Nature.RELOCATE_CARD
+            && !(positionState is LaneSegment))
         {
             completionThreshold = 0;
             followThrough = 0;

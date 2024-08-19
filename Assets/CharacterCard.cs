@@ -25,10 +25,6 @@ public abstract class CharacterCard : NotificationHandler
     public bool revealed;
     public float ongoingMultiplier;
     public bool canMove;
-    public int getPower(Board b)
-    {
-        return getPermanentPower() + temporaryAlterPower;
-    }
     public int getPower()
     {
         return getPermanentPower() + temporaryAlterPower;
@@ -36,10 +32,6 @@ public abstract class CharacterCard : NotificationHandler
     public int getPermanentPower()
     {
         return basePower + permanentAlterPower;
-    }
-    public int getCost(Board b)
-    {
-        return baseCost + permanentAlterCost + temporaryAlterCost;
     }
     public int getCost()
     {

@@ -5,7 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
 
-public class Board : MonoBehaviour
+public class Gameboard : MonoBehaviour
 {
     [SerializeField] private Camera cam;
 
@@ -44,7 +44,7 @@ public class Board : MonoBehaviour
     private CharacterCard selectedCard;
 
     public List<int> energies;
-    private List<int> extraEnergies;
+    public List<int> extraEnergies;
 
     [SerializeField] private GameObject cardExaminer;
     [SerializeField] private GameObject playUI;
@@ -291,7 +291,7 @@ public class Board : MonoBehaviour
                                 && lane.players.Contains(StaticData.player)
                                 && !lane.segments[StaticData.player].isFull()
                                 && lane.segments[StaticData.player] != selectedCard.positionState
-                                && energies[StaticData.player] >= selectedCard.getCost(this))
+                                && energies[StaticData.player] >= selectedCard.getCost())
                             {
                                 List<NotificationHandler> checks = getAllPermissionNeeded();
                                 bool allowed = true;
@@ -315,7 +315,7 @@ public class Board : MonoBehaviour
                                             break;
                                         }
                                     }
-                                    energies[StaticData.player] -= selectedCard.getCost(this);
+                                    energies[StaticData.player] -= selectedCard.getCost();
                                     hands[StaticData.player].removeCardTentatively(selectedCard);
                                     lane.segments[StaticData.player].addCardTentatively(selectedCard);
                                     selectedCard.turnPlayed = turn;
@@ -387,8 +387,8 @@ public class Board : MonoBehaviour
             StaticData.findDeepChild(cardExaminer.transform, "DisplayCard").GetComponent<Image>()
                 .sprite = thisCard.GetComponent<SpriteRenderer>().sprite;
             StaticData.findDeepChild(cardExaminer.transform, "Info1")
-                .GetComponent<TextMeshProUGUI>().text = $"Cost: {thisCard.getCost(this)} (Base: {thisCard.baseCost})" +
-                $"\nPower: {thisCard.getPower(this)} (Base: {thisCard.basePower})" +
+                .GetComponent<TextMeshProUGUI>().text = $"Cost: {thisCard.getCost()} (Base: {thisCard.baseCost})" +
+                $"\nPower: {thisCard.getPower()} (Base: {thisCard.basePower})" +
                 $"\n\nSeries: {thisCard.series}";
             string attList = "Attributes:";
             for (int q = 0; q < thisCard.attributes.Count; q++)
@@ -481,9 +481,15 @@ public class Board : MonoBehaviour
         }
         else if (note.getNature() == GameNotification.Nature.PLAY_PHASE)
         {
+            GameNotification finalize = new GameNotification(GameNotification.Nature.FINALIZE_PLAY_PHASE, false, null);
+            actionQueue.AddLast(finalize);
+            LinkedListNode<GameNotification> afterFin = actionQueue.Last;
+            LinkedListNode<GameNotification> beforeFin = actionQueue.First;
             for (int q = 0; q < turnOrder.Length; q++)
             {
+                List<CharacterCard> unrevealed = new List<CharacterCard>();
                 int currentPlayer = turnOrder[q];
+
                 int[] actions = connector.playerActions[currentPlayer].Value;
                 for (int w = 1; w < actions.Length; w += 3)
                 {
@@ -498,8 +504,13 @@ public class Board : MonoBehaviour
                             hands[currentPlayer].removeCardTentatively(card);
                             dest.addCardTentatively(card);
                         }
-                        actionQueue.AddLast(move);
+                        actionQueue.AddAfter(beforeFin, move);
+                        beforeFin = beforeFin.Next;
+                        GameNotification reveal = new GameNotification(GameNotification.Nature.REVEAL_CARD, true, null);
+                        actionQueue.AddAfter(afterFin, reveal);
+                        afterFin = afterFin.Next;
                         card.turnPlayed = turn;
+                        unrevealed.Add(card);
                     }
                     else if (actions[w] == 1)
                     {
@@ -514,7 +525,21 @@ public class Board : MonoBehaviour
                             moveFrom.removeCardTentatively(card);
                             moveTo.addCardTentatively(card);
                         }
-                        actionQueue.AddLast(move);
+                        actionQueue.AddAfter(beforeFin, move);
+                        beforeFin = beforeFin.Next;
+                    }
+                }
+
+                foreach (Lane lane in lanes)
+                {
+                    foreach (CharacterCard check in lane.segments[currentPlayer].cardsHere)
+                    {
+                        if (!check.revealed && !unrevealed.Contains(check))
+                        {
+                            GameNotification reveal = new GameNotification(GameNotification.Nature.REVEAL_CARD, true, null);
+                            reveal.setCards(new CharacterCard[] { check });
+                            actionQueue.AddAfter(beforeFin, reveal);
+                        }
                     }
                 }
             }
@@ -554,9 +579,6 @@ public class Board : MonoBehaviour
         else if (note.getNature() == GameNotification.Nature.PLAY_CARD)
         {
             archive.playedCards[note.getCharacterCards()[0].myPlayer].Add(note.getCharacterCards()[0]);
-
-            GameNotification reveal = new GameNotification(GameNotification.Nature.REVEAL_CARD, true, null);
-            reveal.setCards(new CharacterCard[] { note.getCharacterCards()[0] });
         }
         else if (note.getNature() == GameNotification.Nature.REVEAL_CARD)
         {
@@ -582,6 +604,15 @@ public class Board : MonoBehaviour
                 }
             }
         }
+        else if (note.getNature() == GameNotification.Nature.RELOCATE_CARD)
+        {
+            if (note.getPositions()[1] is LaneSegment && !(note.getPositions()[0] is LaneSegment))
+            {
+                GameNotification reveal = new GameNotification(GameNotification.Nature.REVEAL_CARD, true, null);
+                reveal.setCards(new CharacterCard[] { note.getCharacterCards()[0] });
+                actionQueue.AddAfter(actionQueue.First, reveal);
+            }
+        }
     }
     public void calculateScores()
     {
@@ -589,7 +620,7 @@ public class Board : MonoBehaviour
         {
             foreach (LaneSegment seg in lane.segments)
             {
-                seg.calculatePowers(this);
+                seg.calculatePowers();
             }
         }
     }

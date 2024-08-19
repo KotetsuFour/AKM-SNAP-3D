@@ -55,7 +55,7 @@ public class PositionState : MonoBehaviour
 
     public bool isEmpty()
     {
-        return cardsHere.Count == 0;
+        return cardsHere.Count + tentativeCards.Count - tentativelyRemovedCards.Count == 0;
     }
     public bool isFull()
     {
@@ -104,6 +104,13 @@ public class PositionState : MonoBehaviour
     }
     public void finalizeTentatives()
     {
-
+        cardsHere.AddRange(tentativeCards);
+        foreach (CharacterCard card in tentativelyRemovedCards)
+        {
+            cardsHere.Remove(card);
+        }
+        tentativeCards = new List<CharacterCard>();
+        tentativelyRemovedCards = new List<CharacterCard>();
+        updateCardPositions();
     }
 }

@@ -4,8 +4,14 @@ using UnityEngine;
 
 public class Trucos : Location
 {
-    public new bool canReveal(Board b)
+    public new GameNotification.Permission allowNotification(GameNotification note)
     {
-        return b.turn == Board.lastTurn;
+        if (note.getNature() == GameNotification.Nature.REVEAL_CARD
+            && lane.segments.Contains((LaneSegment)note.getCharacterCards()[0].positionState)
+            && StaticData.board.turn < Gameboard.lastTurn)
+        {
+            return new GameNotification.Permission(this, false);
+        }
+        return new GameNotification.Permission(this, true);
     }
 }

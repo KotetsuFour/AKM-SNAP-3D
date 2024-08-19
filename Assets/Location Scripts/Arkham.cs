@@ -4,28 +4,22 @@ using UnityEngine;
 
 public class Arkham : Location
 {
-    public new string ongoingEffect(Board b)
+    [SerializeField] private int costToSummon;
+    public new List<GameNotification> getResponse(GameNotification note)
     {
-        if (b.turn != 3)
+        if (!isMyLocationReveal(note))
         {
             return null;
         }
-        List<CharacterCard[]> cards = new List<CharacterCard[]>();
-        for (int q = 0; q < lane.segments.Count; q++)
+        List<GameNotification> ret = new List<GameNotification>();
+        foreach (PositionState hand in StaticData.board.hands)
         {
-            cards.Add(lane.segments[q].ToArray());
-            lane.segments[q].Clear();
+            GameNotification create = new GameNotification(GameNotification.Nature.CREATE_CARD, true, this);
+            create.setCards(new CharacterCard[] { StaticData.getRandomCostCard(costToSummon) });
+            create.setPositions(new PositionState[] { hand });
+            ret.Add(create);
         }
-        for (int q = 0; q < lane.players.Count; q++)
-        {
-            int switchToPlayerIdx = (q + 1) % lane.players.Count;
-            for (int w = 0; w < cards[lane.players[q]].Length; w++)
-            {
-                CharacterCard toSwitch = cards[lane.players[q]][w];
-                toSwitch.myPlayer = lane.players[switchToPlayerIdx];
-                b.addToLane(lane, toSwitch, lane.players[switchToPlayerIdx]);
-            }
-        }
-        return $"{locationName} switched the sides of cards located there.\n";
+
+        return ret;
     }
 }

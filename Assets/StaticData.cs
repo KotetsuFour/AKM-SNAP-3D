@@ -6,7 +6,7 @@ public static class StaticData
 {
     public static int numPlayers;
     public static int player;
-    public static Board board;
+    public static Gameboard board;
 
     public static int numCardsPerLane = 4;
 
@@ -54,5 +54,9 @@ public static class StaticData
     public static CharacterCard getRandomCard()
     {
         return allCards[Random.Range(0, allCards.Count)];
+    }
+    public static int getRandomInt(int exclusiveCap)
+    {
+        return Random.Range(0, exclusiveCap);
     }
 }

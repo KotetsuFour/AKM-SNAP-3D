@@ -123,6 +123,10 @@ public class GameNotification
             subject.updatePowerAndCostDisplay();
             StaticData.board.calculateScores();
         }
+        else if (getNature() == Nature.FINALIZE_PLAY_PHASE)
+        {
+            //nothing
+        }
         else if (getNature() == Nature.FINISH)
         {
             //nothing
@@ -262,7 +266,7 @@ public class GameNotification
     }
     public enum Nature
     {
-        GAME_START, TURN_START, PLAY_PHASE, TURN_END, GAME_END, FINISH, STANDBY, PLAY_CARD, SHUFFLE,
+        GAME_START, TURN_START, PLAY_PHASE, TURN_END, GAME_END, FINISH, STANDBY, PLAY_CARD, FINALIZE_PLAY_PHASE, SHUFFLE,
         REVEAL_CARD, REGISTER_MOVE, ON_REVEAL, ONGOING, LOCATION_EFFECT,
         PERM_ALTER_POWER, TEMP_ALTER_POWER, ALTER_COST,
         CREATE_CARD, RELOCATE_CARD, CHANGE_LOCATION, ALTER_ONGOING, TRANSFORM_CARD

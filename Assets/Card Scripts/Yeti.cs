@@ -4,17 +4,34 @@ using UnityEngine;
 
 public class Yeti : CharacterCard
 {
-    public new string onReveal(Board b)
+    [SerializeField] private int penalty;
+
+    public new List<GameNotification> getResponse(GameNotification note)
     {
-        int playerToFreeze = Random.Range(0, StaticData.numPlayers);
-        if (playerToFreeze == myPlayer)
+        if (!isMyOnReveal(note))
         {
-            playerToFreeze = (playerToFreeze + 1) % StaticData.numPlayers;
+            return null;
         }
-        if (b.hands[playerToFreeze].Count > 0)
+
+        List<GameNotification> ret = new List<GameNotification>();
+        for (int q = 0; q < StaticData.board.hands.Count; q++)
         {
-            b.hands[playerToFreeze][Random.Range(0, b.hands[playerToFreeze].Count)].changeCost(1);
+            if (q == myPlayer)
+            {
+                continue;
+            }
+            foreach (CharacterCard card in StaticData.board.hands[q].cardsHere)
+            {
+                if (card.getCost() < 6)
+                {
+                    GameNotification pen = new GameNotification(GameNotification.Nature.ALTER_COST, true, this);
+                    pen.setCards(new CharacterCard[] { card });
+                    pen.setInts(new int[] { 1 });
+                    ret.Add(pen);
+                    break;
+                }
+            }
         }
-        return $"Player {myPlayer}'s {characterName} targeted a card in Player {playerToFreeze}'s hand to give +1 Cost.\n";
+        return ret;
     }
 }

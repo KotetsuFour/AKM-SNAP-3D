@@ -4,35 +4,38 @@ using UnityEngine;
 
 public class LeakBoy : CharacterCard
 {
-    public new string onReveal(Board b)
+    public new List<GameNotification> getResponse(GameNotification note)
     {
-        string ret = "";
-        int bonus = 0;
-        for (int laneIdx = 0; laneIdx < b.lanes.Length; laneIdx++)
+        if (!isMyOnReveal(note))
         {
-            Lane lane = b.lanes[laneIdx];
+            return null;
+        }
+
+        List<GameNotification> ret = new List<GameNotification>();
+
+        int bonus = 0;
+        foreach (Lane lane in StaticData.board.lanes)
+        {
             for (int q = 0; q < lane.segments.Count; q++)
             {
                 if (q == myPlayer)
                 {
                     continue;
                 }
-                for (int w = 0; w < lane.segments[q].Count; w++)
+                foreach (CharacterCard card in lane.segments[q].cardsHere)
                 {
-                    if (lane.segments[q][w].revealed && lane.segments[q][w].attributes.Contains(Attribute.WATER))
+                    if (card.attributes.Contains(Attribute.WATER))
                     {
                         bonus++;
-                        changePermanentPower(1);
                     }
                 }
             }
         }
-        if (bonus == 0)
-        {
-            return null;
-        }
-        changePermanentPower(bonus);
-        ret += $"Player {myPlayer}'s {characterName} gained {bonus} Power from opponents' Water cards.\n";
+        GameNotification buff = new GameNotification(GameNotification.Nature.PERM_ALTER_POWER, true, this);
+        buff.setCards(new CharacterCard[] { this });
+        buff.setInts(new int[] { bonus });
+        ret.Add(buff);
+
         return ret;
     }
 }

@@ -4,35 +4,22 @@ using UnityEngine;
 
 public class DreamDimension : Location
 {
-    private int turnRevealed;
-    public new string onLocationReveal(Board b)
+    public new List<GameNotification> getResponse(GameNotification note)
     {
-        turnRevealed = b.turn;
-        return null;
-    }
-    public new string ongoingEffect(Board b)
-    {
-        if (b.turn != turnRevealed)
+        if (!isMyLocationReveal(note))
         {
             return null;
         }
-        for (int q = 0; q < lane.segments.Count; q++)
+        List<GameNotification> ret = new List<GameNotification>();
+        foreach (Deck deck in StaticData.board.decks)
         {
-            CharacterCard[] cards = lane.segments[q].ToArray();
-            for (int w = 0; w < cards.Length; w++)
+            foreach (CharacterCard card in deck.cardsHere)
             {
-                Destroy(cards[w]);
-                lane.segments[q].Remove(cards[w]);
-                b.addToLane(lane, Instantiate(StaticData.allCards[Random.Range(0, StaticData.allCards.Count)]), q);
+                GameNotification replace = new GameNotification(GameNotification.Nature.TRANSFORM_CARD, false, this);
+                replace.setCards(new CharacterCard[] { card, StaticData.getRandomCard() });
+                ret.Add(replace);
             }
         }
-        for (int q = 0; q < lane.segments.Count; q++)
-        {
-            for (int w = 0; w < lane.segments[q].Count; w++)
-            {
-                lane.segments[q][w].onReveal(b);
-            }
-        }
-        return $"All cards at {locationName} become random cards.\n";
+        return ret;
     }
 }

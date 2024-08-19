@@ -25,7 +25,7 @@ public class LaneSegment : PositionState
         }
         return ret;
     }
-    public void calculatePowers(Board b)
+    public void calculatePowers()
     {
         for (int q = 0; q < cardsHere.Count; q++)
         {
@@ -36,7 +36,7 @@ public class LaneSegment : PositionState
                 {
                     continue;
                 }
-                calculatedPower += cardsHere[q].getPower(b);
+                calculatedPower += cardsHere[q].getPower();
             }
             calculatedPower += extraPower;
         }

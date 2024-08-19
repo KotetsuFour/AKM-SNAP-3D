@@ -4,21 +4,52 @@ using UnityEngine;
 
 public class SunshineGirl : CharacterCard
 {
-    public new string onReveal(Board b)
+    [SerializeField] private int bonus;
+    private List<LaneSegment> activationLanes;
+    private void Start()
     {
-        string ret = "";
-        foreach (Lane lane in b.lanes)
+        activationLanes = new List<LaneSegment>();
+    }
+    public new List<GameNotification> getResponse(GameNotification note)
+    {
+        List<GameNotification> ret = new List<GameNotification>();
+        if (isMyOnReveal(note))
         {
-            for (int q = 0; q < lane.segments[myPlayer].Count; q++)
+            activationLanes.Add((LaneSegment)positionState);
+        }
+        else if (note.getNature() == GameNotification.Nature.PLAY_CARD
+            && activationLanes.Contains((LaneSegment)note.getPositions()[0]))
+        {
+            LaneSegment seg = (LaneSegment)note.getPositions()[0];
+            while (activationLanes.Contains(seg))
             {
-                if (lane.segments[myPlayer][q] != this
-                    && lane.segments[myPlayer][q].abilityDescription.Contains("Ongoing: "))
-                {
-                    ret += $"Player {myPlayer}'s {characterName} increases their {lane.segments[myPlayer][q].characterName}'s Power by 2.\n";
-                    lane.segments[myPlayer][q].changePermanentPower(2);
-                }
+                activationLanes.Remove(seg);
             }
         }
+        else if (note.getNature() == GameNotification.Nature.FINALIZE_PLAY_PHASE
+            && positionState is LaneSegment)
+        {
+            while (activationLanes.Count > 0)
+            {
+                GameNotification buff = new GameNotification(GameNotification.Nature.PERM_ALTER_POWER, true, this);
+                buff.setCards(new CharacterCard[] { this });
+                buff.setInts(new int[] { bonus });
+
+                ret.Add(buff);
+
+                activationLanes.RemoveAt(0);
+            }
+        }
+        else if (note.getNature() == GameNotification.Nature.RELOCATE_CARD
+            && !(positionState is LaneSegment))
+        {
+            activationLanes = new List<LaneSegment>();
+        }
+        else
+        {
+            return null;
+        }
+
         return ret;
     }
 }
