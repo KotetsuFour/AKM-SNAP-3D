@@ -95,7 +95,7 @@ public class GameNotification
         if (getNature() == Nature.ALTER_COST)
         {
             CharacterCard subject = getCharacterCards()[0];
-            subject.changeCost(getInts()[0]);
+            subject.temporaryAlterCost += getInts()[0];
         }
         else if (getNature() == Nature.ALTER_ONGOING)
         {
@@ -115,13 +115,15 @@ public class GameNotification
         }
         else if (getNature() == Nature.CREATE_CARD)
         {
-            CharacterCard subject = Object.Instantiate(getCharacterCards()[0]);
-            getCharacterCards()[0] = subject;
-            getPositions()[0].addCard(subject);
-            subject.myPlayer = getInts()[0];
+            if (!getPositions()[0].isFull())
+            {
+                CharacterCard subject = Object.Instantiate(getCharacterCards()[0]);
+                getCharacterCards()[0] = subject;
+                getPositions()[0].addCard(subject);
+                subject.myPlayer = getInts()[0];
 
-            subject.updatePowerAndCostDisplay();
-            StaticData.board.calculateScores();
+                StaticData.board.calculateScores();
+            }
         }
         else if (getNature() == Nature.FINALIZE_PLAY_PHASE)
         {
@@ -318,10 +320,6 @@ public class GameNotification
     public static void changeTemporaryPower(CharacterCard card, int amount)
     {
         card.changeTemporaryPower(amount);
-    }
-    public static void changeCost(CharacterCard card, int amount)
-    {
-        card.changeCost(amount);
     }
     public static void createCard(CharacterCard prefab, PositionState dest)
     {

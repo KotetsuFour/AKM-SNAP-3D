@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 public class LaneSegment : PositionState
 {
@@ -8,10 +9,13 @@ public class LaneSegment : PositionState
     public int calculatedPower;
     public int extraPower;
 
+    private TextMeshProUGUI powerDisplay;
+
     // Start is called before the first frame update
     void Start()
     {
-
+        powerDisplay = StaticData.findDeepChild(lane.transform, "Power" + myPlayer)
+            .GetComponent<TextMeshProUGUI>();
     }
     public List<CharacterCard> getRevealedCards()
     {
@@ -27,19 +31,18 @@ public class LaneSegment : PositionState
     }
     public void calculatePowers()
     {
+        calculatedPower = 0;
         for (int q = 0; q < cardsHere.Count; q++)
         {
-            calculatedPower = 0;
-            for (int w = 0; w < cardsHere.Count; w++)
+            if (!cardsHere[q].revealed)
             {
-                if (!cardsHere[q].revealed)
-                {
-                    continue;
-                }
-                calculatedPower += cardsHere[q].getPower();
+                continue;
             }
-            calculatedPower += extraPower;
+            calculatedPower += cardsHere[q].getPower();
         }
+        calculatedPower += extraPower;
+
+        powerDisplay.text = "" + calculatedPower;
     }
 
 }

@@ -28,7 +28,7 @@ public class Gameboard : MonoBehaviour
 
     [SerializeField] private Deck deckPrefab;
     public List<Deck> decks;
-    public List<PositionState> hands;
+    public List<Hand> hands;
     public List<PositionState> destroyedCardPiles;
     public List<PositionState> discardPiles;
 
@@ -104,9 +104,38 @@ public class Gameboard : MonoBehaviour
         }
         return ret;
     }
+    public void setMyDeck()
+    {
+        for (int q = 0; q < StaticData.myDeck.Count; q++)
+        {
+            addCardToDeck(decks[0], StaticData.myDeck[q]);
+        }
+    }
+    public void setDeck(int player, NetworkLogic.DeckPackage deckPack)
+    {
+        addCardToDeck(decks[player], deckPack.card0);
+        addCardToDeck(decks[player], deckPack.card1);
+        addCardToDeck(decks[player], deckPack.card2);
+        addCardToDeck(decks[player], deckPack.card3);
+        addCardToDeck(decks[player], deckPack.card4);
+        addCardToDeck(decks[player], deckPack.card5);
+        addCardToDeck(decks[player], deckPack.card6);
+        addCardToDeck(decks[player], deckPack.card7);
+        addCardToDeck(decks[player], deckPack.card8);
+        addCardToDeck(decks[player], deckPack.card9);
+        addCardToDeck(decks[player], deckPack.card10);
+        addCardToDeck(decks[player], deckPack.card11);
+    }
+    private void addCardToDeck(Deck deck, int cardIdx)
+    {
+        CharacterCard card = Instantiate(StaticData.allCards[cardIdx]);
+        deck.addCard(card);
+    }
     void Start()
     {
         StaticData.board = this;
+
+        setMyDeck();
 
         GameObject found = GameObject.Find("Player Connector");
         if (found == null)

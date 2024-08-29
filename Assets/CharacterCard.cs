@@ -6,9 +6,9 @@ using UnityEngine.SceneManagement;
 
 public abstract class CharacterCard : NotificationHandler
 {
+    public Texture2D faceImage;
     public string characterName;
     public int baseCost;
-    public int permanentAlterCost;
     public int temporaryAlterCost;
     public int basePower;
     public int permanentAlterPower;
@@ -18,7 +18,6 @@ public abstract class CharacterCard : NotificationHandler
     public List<Attribute> attributes;
     public Series series;
     public int id;
-    public int turnToDraw;
     public int myPlayer;
     public PositionState positionState;
     public int turnPlayed;
@@ -35,7 +34,7 @@ public abstract class CharacterCard : NotificationHandler
     }
     public int getCost()
     {
-        return baseCost + permanentAlterCost + temporaryAlterCost;
+        return baseCost + temporaryAlterCost;
     }
     public void changePermanentPower(int amount)
     {
@@ -44,10 +43,6 @@ public abstract class CharacterCard : NotificationHandler
     public void changeTemporaryPower(int amount)
     {
         temporaryAlterPower += amount;
-    }
-    public void changeCost(int amount)
-    {
-        permanentAlterCost += amount;
     }
     public void setBasePower(int p)
     {
@@ -79,7 +74,7 @@ public abstract class CharacterCard : NotificationHandler
     public enum Series
     {
         KOTETSU_CLASSIC, KOTETSU_EXPANDED, BROTHER, SISTER, KOTETSU_VILLAIN_CLASSIC,
-        KOTETSU_VILLAIN_EXPANDED, BROTHER_VILLAIN, SISTER_VILLAIN
+        KOTETSU_VILLAIN_EXPANDED, BROTHER_VILLAIN, SISTER_VILLAIN, SPECIAL, MOSSONITE
     }
     public enum Attribute
     {
@@ -98,6 +93,50 @@ public abstract class CharacterCard : NotificationHandler
     }
     public void updatePowerAndCostDisplay()
     {
+        if (positionState == null || positionState is Hand)
+        {
+            StaticData.findDeepChild(transform, "CostCircle").gameObject.SetActive(true);
+            StaticData.findDeepChild(transform, "PowerCircle").gameObject.SetActive(true);
+        }
+        else if (positionState is LaneSegment)
+        {
+            StaticData.findDeepChild(transform, "CostCircle").gameObject.SetActive(false);
+            StaticData.findDeepChild(transform, "PowerCircle").gameObject.SetActive(true);
+        }
+        else
+        {
+            StaticData.findDeepChild(transform, "CostCircle").gameObject.SetActive(true);
+            StaticData.findDeepChild(transform, "PowerCircle").gameObject.SetActive(true);
+        }
+        TextMeshProUGUI costDisplay = StaticData.findDeepChild(transform, "Cost").GetComponent<TextMeshProUGUI>();
+        TextMeshProUGUI powerDisplay = StaticData.findDeepChild(transform, "Power").GetComponent<TextMeshProUGUI>();
+        costDisplay.text = "" + getCost();
+        powerDisplay.text = "" + getPower();
 
+        if (getCost() > baseCost)
+        {
+            costDisplay.color = Color.red;
+        }
+        else if (getCost() < baseCost)
+        {
+            costDisplay.color = Color.green;
+        }
+        else
+        {
+            costDisplay.color = Color.white;
+        }
+
+        if (getPower() > basePower)
+        {
+            powerDisplay.color = Color.green;
+        }
+        else if (getPower() < basePower)
+        {
+            powerDisplay.color = Color.red;
+        }
+        else
+        {
+            powerDisplay.color = Color.white;
+        }
     }
 }

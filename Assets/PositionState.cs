@@ -67,6 +67,7 @@ public class PositionState : MonoBehaviour
         cardsHere.Add(card);
         card.positionState = this;
         updateCardPositions();
+        card.updatePowerAndCostDisplay();
     }
     public void removeCard(CharacterCard card)
     {
