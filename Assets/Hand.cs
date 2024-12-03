@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Hand : PositionState
 {
-    public new void updateCardPositions()
+    public override void updateCardPositions()
     {
         int border = (positions.Count - cardsHere.Count) / 2;
         for (int q = 0; q < cardsHere.Count; q++)

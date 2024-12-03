@@ -5,7 +5,7 @@ using UnityEngine;
 public class Nera : CharacterCard
 {
     [SerializeField] private List<int> protectedCosts;
-    public new GameNotification.Permission allowNotification(GameNotification note)
+    public override GameNotification.Permission allowNotification(GameNotification note)
     {
         if (note.getNature() == GameNotification.Nature.RELOCATE_CARD
             && note.getPositions()[1] == StaticData.board.destroyedCardPiles[myPlayer]

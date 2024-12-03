@@ -6,7 +6,7 @@ public class EarthBoy : CharacterCard
 {
     [SerializeField] private CharacterCard rock;
 
-    public new List<GameNotification> getResponse(GameNotification note)
+    public override List<GameNotification> getResponse(GameNotification note)
     {
         if (!isMyOnReveal(note))
         {

@@ -23,7 +23,7 @@ public class PositionState : MonoBehaviour
     {
         
     }
-    public void updateCardPositions()
+    public virtual void updateCardPositions()
     {
         for (int q = 0; q < cardsHere.Count; q++)
         {
@@ -31,7 +31,7 @@ public class PositionState : MonoBehaviour
             cardsHere[q].transform.rotation = positions[q % positions.Count].rotation;
         }
     }
-    public void updateTentativeCardPositions()
+    public virtual void updateTentativeCardPositions()
     {
         int skipped = 0;
         for (int q = 0; q < cardsHere.Count; q++)
@@ -75,35 +75,35 @@ public class PositionState : MonoBehaviour
         card.positionState = null;
         updateCardPositions();
     }
-    public void replaceCard(CharacterCard old, CharacterCard replacement)
+    public virtual void replaceCard(CharacterCard old, CharacterCard replacement)
     {
         int idx = cardsHere.IndexOf(old);
         cardsHere[idx] = replacement;
         updateCardPositions();
     }
 
-    public void addCardTentatively(CharacterCard card)
+    public virtual void addCardTentatively(CharacterCard card)
     {
         tentativeCards.Add(card);
         updateTentativeCardPositions();
     }
 
-    public void removeCardTentatively(CharacterCard card)
+    public virtual void removeCardTentatively(CharacterCard card)
     {
         tentativelyRemovedCards.Add(card);
         updateTentativeCardPositions();
     }
-    public void undoTentativeAdd()
+    public virtual void undoTentativeAdd()
     {
         tentativeCards.RemoveAt(tentativeCards.Count - 1);
         updateTentativeCardPositions();
     }
-    public void undoTentativeRemove()
+    public virtual void undoTentativeRemove()
     {
         tentativelyRemovedCards.RemoveAt(tentativelyRemovedCards.Count - 1);
         updateTentativeCardPositions();
     }
-    public void finalizeTentatives()
+    public virtual void finalizeTentatives()
     {
         cardsHere.AddRange(tentativeCards);
         foreach (CharacterCard card in tentativelyRemovedCards)

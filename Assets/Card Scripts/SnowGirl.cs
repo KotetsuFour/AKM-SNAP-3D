@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class SnowGirl : CharacterCard
 {
-    public new List<GameNotification> getResponse(GameNotification note)
+    public override List<GameNotification> getResponse(GameNotification note)
     {
         if (note.getNature() != GameNotification.Nature.TURN_END)
         {

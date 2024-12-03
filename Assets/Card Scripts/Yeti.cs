@@ -6,7 +6,7 @@ public class Yeti : CharacterCard
 {
     [SerializeField] private int penalty;
 
-    public new List<GameNotification> getResponse(GameNotification note)
+    public override List<GameNotification> getResponse(GameNotification note)
     {
         if (!isMyOnReveal(note))
         {

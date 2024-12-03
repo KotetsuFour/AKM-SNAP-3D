@@ -10,7 +10,7 @@ public class NoAbility : CharacterCard
     {
         activated = true;
     }
-    public new GameNotification.Permission allowNotification(GameNotification note)
+    public override GameNotification.Permission allowNotification(GameNotification note)
     {
         if (activated)
         {
@@ -18,7 +18,7 @@ public class NoAbility : CharacterCard
         }
         return new GameNotification.Permission(this, true);
     }
-    public new GameNotification.Permission allowPermission(GameNotification.Permission note)
+    public override GameNotification.Permission allowPermission(GameNotification.Permission note)
     {
         if (activated)
         {
@@ -27,7 +27,7 @@ public class NoAbility : CharacterCard
         return new GameNotification.Permission(this, true);
     }
 
-    public new List<GameNotification> getResponse(GameNotification note)
+    public override List<GameNotification> getResponse(GameNotification note)
     {
         if (activated)
         {

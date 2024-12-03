@@ -5,7 +5,7 @@ using UnityEngine;
 public class QueenOfClovers : CharacterCard
 {
     [SerializeField] private int summonCost;
-    public new List<GameNotification> getResponse(GameNotification note)
+    public override List<GameNotification> getResponse(GameNotification note)
     {
         if (!isMyOnReveal(note))
         {

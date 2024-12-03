@@ -4,6 +4,8 @@ using UnityEngine;
 
 public static class StaticData
 {
+    public static string playerLoginId;
+    public static string playerName;
     public static int numPlayers;
     public static int player;
     public static Gameboard board;
@@ -19,6 +21,8 @@ public static class StaticData
     public static List<Location> allLocations = new List<Location>();
 
     public static int[] finalScores;
+
+    public static int NUM_CARDS_IN_DECK = 12;
 
     public static Transform findDeepChild(Transform parent, string childName)
     {

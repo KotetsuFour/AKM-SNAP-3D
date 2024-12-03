@@ -7,7 +7,7 @@ public class CardLibrary : MonoBehaviour
     [SerializeField] private List<CharacterCard> allNonSpecialCards;
     [SerializeField] private List<CharacterCard> allSpecialCards;
     // Start is called before the first frame update
-    void Start()
+    void Awake()
     {
         for (int q = 0; q < allNonSpecialCards.Count; q++)
         {

@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Golyat : CharacterCard
 {
-    public new List<GameNotification> getResponse(GameNotification note)
+    public override List<GameNotification> getResponse(GameNotification note)
     {
         List<GameNotification> ret = new List<GameNotification>();
         if (note.getNature() == GameNotification.Nature.RELOCATE_CARD

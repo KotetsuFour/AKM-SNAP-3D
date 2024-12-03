@@ -10,7 +10,7 @@ public class SunshineGirl : CharacterCard
     {
         activationLanes = new List<LaneSegment>();
     }
-    public new List<GameNotification> getResponse(GameNotification note)
+    public override List<GameNotification> getResponse(GameNotification note)
     {
         List<GameNotification> ret = new List<GameNotification>();
         if (isMyOnReveal(note))

@@ -9,7 +9,7 @@ public class FireGuy : CharacterCard
     {
         gotten = new bool[StaticData.numPlayers];
     }
-    public new List<GameNotification> getResponse(GameNotification note)
+    public override List<GameNotification> getResponse(GameNotification note)
     {
 
         if (note.getNature() == GameNotification.Nature.REVEAL_CARD

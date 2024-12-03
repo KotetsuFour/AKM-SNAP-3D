@@ -5,7 +5,7 @@ using UnityEngine;
 public class Arkham : Location
 {
     [SerializeField] private int costToSummon;
-    public new List<GameNotification> getResponse(GameNotification note)
+    public override List<GameNotification> getResponse(GameNotification note)
     {
         if (!isMyLocationReveal(note))
         {

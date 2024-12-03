@@ -10,7 +10,7 @@ public class LucidLilah : CharacterCard
     private int followThrough;
     [SerializeField] private int turnFourBonus;
 
-    public new List<GameNotification> getResponse(GameNotification note)
+    public override List<GameNotification> getResponse(GameNotification note)
     {
         List<GameNotification> ret = new List<GameNotification>();
         if (!isMyOnReveal(note))

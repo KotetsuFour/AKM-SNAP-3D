@@ -5,7 +5,7 @@ using UnityEngine;
 public class HumanArsenal : CharacterCard
 {
     [SerializeField] private int bonus;
-    public new List<GameNotification> getResponse(GameNotification note)
+    public override List<GameNotification> getResponse(GameNotification note)
     {
         if (!isMyOnReveal(note))
         {

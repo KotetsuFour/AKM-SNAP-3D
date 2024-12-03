@@ -18,15 +18,12 @@ public class Gameboard : MonoBehaviour
     [SerializeField] private Lane threePlayerRightLane;
     [SerializeField] private Lane threePlayerTopLane;
 
-    [SerializeField] private UnrevealedLocation unrevealed;
-
     public Lane leftLane;
     public Lane middleLane;
     public Lane rightLane;
     public Lane topLane;
     public Lane[] lanes;
 
-    [SerializeField] private Deck deckPrefab;
     public List<Deck> decks;
     public List<Hand> hands;
     public List<PositionState> destroyedCardPiles;
@@ -36,10 +33,7 @@ public class Gameboard : MonoBehaviour
     [SerializeField] private LayerMask positionLayer;
 
     public int turn;
-    public static int lastTurn = 6;
-
-    public static float cardWidth = 1.35f;
-    public static float cardHeight = 1.75f;
+    public int lastTurn = 6;
 
     private CharacterCard selectedCard;
 
@@ -53,7 +47,6 @@ public class Gameboard : MonoBehaviour
     // Start is called before the first frame update
 
     private bool donePlaying;
-    private PlayerConnector connector;
     private List<int> myActions;
     private int[] turnOrder;
 
@@ -135,15 +128,6 @@ public class Gameboard : MonoBehaviour
     {
         StaticData.board = this;
 
-        setMyDeck();
-
-        GameObject found = GameObject.Find("Player Connector");
-        if (found == null)
-        {
-            found = GameObject.Find("Player Connector(Clone)");
-        }
-        connector = found.GetComponent<PlayerConnector>();
-
         if (StaticData.numPlayers == 2)
         {
             leftLane = Instantiate(twoPlayerLeftLane);
@@ -169,10 +153,11 @@ public class Gameboard : MonoBehaviour
         }
 
         archive = new GameArchive();
-
+    }
+    public void startGame()
+    {
         GameNotification start = new GameNotification(GameNotification.Nature.GAME_START, false, null);
         actionQueue.AddLast(start);
-
     }
     public Lane oneLaneToTheRight(Lane lane)
     {
@@ -414,27 +399,32 @@ public class Gameboard : MonoBehaviour
             playUI.SetActive(false);
             cardExaminer.SetActive(true);
             StaticData.findDeepChild(cardExaminer.transform, "DisplayCard").GetComponent<Image>()
-                .sprite = thisCard.GetComponent<SpriteRenderer>().sprite;
-            StaticData.findDeepChild(cardExaminer.transform, "Info1")
-                .GetComponent<TextMeshProUGUI>().text = $"Cost: {thisCard.getCost()} (Base: {thisCard.baseCost})" +
-                $"\nPower: {thisCard.getPower()} (Base: {thisCard.basePower})" +
-                $"\n\nSeries: {thisCard.series}";
+                .sprite = thisCard.faceImage;
+            StaticData.findDeepChild(cardExaminer.transform, "Cost").GetComponent<TextMeshProUGUI>()
+                .text = $"{thisCard.getCost()} (Base: {thisCard.baseCost})";
+            StaticData.findDeepChild(cardExaminer.transform, "Power").GetComponent<TextMeshProUGUI>()
+                .text = $"{thisCard.getPower()} (Base: {thisCard.basePower})";
+            StaticData.findDeepChild(cardExaminer.transform, "Series").GetComponent<TextMeshProUGUI>()
+                .text = $"Series:\n{thisCard.series}";
             string attList = "Attributes:";
             for (int q = 0; q < thisCard.attributes.Count; q++)
             {
-                attList += " " + thisCard.attributes[q];
-                if (q < thisCard.attributes.Count - 1)
-                {
-                    attList += ",";
-                }
+                attList += "\n" + thisCard.attributes[q];
             }
-            StaticData.findDeepChild(cardExaminer.transform, "Info2").GetComponent<TextMeshProUGUI>()
+            StaticData.findDeepChild(cardExaminer.transform, "Attributes").GetComponent<TextMeshProUGUI>()
                 .text = attList;
             StaticData.findDeepChild(cardExaminer.transform, "CardName").GetComponent<TextMeshProUGUI>()
                 .text = thisCard.characterName;
             StaticData.findDeepChild(cardExaminer.transform, "Ability").GetComponent<TextMeshProUGUI>()
                 .text = thisCard.abilityDescription;
         }
+    }
+
+    public void endTurn()
+    {
+        donePlaying = true;
+        StaticData.findDeepChild(playUI.transform, "EndTurn").GetComponent<Button>().interactable = false;
+        GameObject.Find("NetworkLogic").GetComponent<NetworkLogic>().setActionsForTurn(myActions);
     }
 
     public void undo()
@@ -506,6 +496,8 @@ public class Gameboard : MonoBehaviour
             }
 
             //Start play phase
+            donePlaying = false;
+            StaticData.findDeepChild(playUI.transform, "EndTurn").GetComponent<Button>().interactable = true;
             actionQueue.AddLast(new GameNotification(GameNotification.Nature.PLAY_PHASE, false, null));
         }
         else if (note.getNature() == GameNotification.Nature.PLAY_PHASE)
@@ -519,7 +511,8 @@ public class Gameboard : MonoBehaviour
                 List<CharacterCard> unrevealed = new List<CharacterCard>();
                 int currentPlayer = turnOrder[q];
 
-                int[] actions = connector.playerActions[currentPlayer].Value;
+                int[] actions = GameObject.Find("NetworkLogic").GetComponent<NetworkLogic>()
+                    .playerActions[currentPlayer].ToArray();
                 for (int w = 1; w < actions.Length; w += 3)
                 {
                     if (actions[w] == 0)

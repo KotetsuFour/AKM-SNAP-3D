@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class BloodyLilah : CharacterCard
 {
-    public new GameNotification.Permission allowNotification(GameNotification note)
+    public override GameNotification.Permission allowNotification(GameNotification note)
     {
         if (note.getNature() == GameNotification.Nature.ON_REVEAL)
         {

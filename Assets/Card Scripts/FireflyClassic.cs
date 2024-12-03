@@ -5,7 +5,7 @@ using UnityEngine;
 public class FireflyClassic : CharacterCard
 {
     [SerializeField] private int threshold;
-    public new List<GameNotification> getResponse(GameNotification note)
+    public override List<GameNotification> getResponse(GameNotification note)
     {
         if (!isMyOnReveal(note))
         {

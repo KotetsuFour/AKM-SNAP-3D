@@ -4,38 +4,27 @@ using UnityEngine;
 
 public class NotificationHandler : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-    public GameNotification.Permission allowNotification(GameNotification note)
+    public virtual GameNotification.Permission allowNotification(GameNotification note)
     {
         return new GameNotification.Permission(this, true);
     }
-    public GameNotification.Permission allowPermission(GameNotification.Permission note)
+    public virtual GameNotification.Permission allowPermission(GameNotification.Permission note)
     {
         return new GameNotification.Permission(this, true);
     }
-    public List<GameNotification> getResponse(GameNotification note)
+    public virtual List<GameNotification> getResponse(GameNotification note)
     {
         return null;
     }
-    public bool allowPlaceCard(CharacterCard card, LaneSegment dest)
+    public virtual bool allowPlaceCard(CharacterCard card, LaneSegment dest)
     {
         return true;
     }
-    public bool allowMoveCard(CharacterCard card, LaneSegment origin, LaneSegment dest)
+    public virtual bool allowMoveCard(CharacterCard card, LaneSegment origin, LaneSegment dest)
     {
         return true;
     }
-    public bool animate(GameNotification note)
+    public virtual bool animate(GameNotification note)
     {
         return true;
     }

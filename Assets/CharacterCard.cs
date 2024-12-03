@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 
 public abstract class CharacterCard : NotificationHandler
 {
-    public Texture2D faceImage;
+    public Sprite faceImage;
     public string characterName;
     public int baseCost;
     public int temporaryAlterCost;

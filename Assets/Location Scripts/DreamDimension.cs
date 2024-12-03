@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class DreamDimension : Location
 {
-    public new List<GameNotification> getResponse(GameNotification note)
+    public override List<GameNotification> getResponse(GameNotification note)
     {
         if (!isMyLocationReveal(note))
         {

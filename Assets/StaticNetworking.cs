@@ -13,21 +13,21 @@ public static class StaticNetworking
 {
     public static bool waiting = false;
 
-    public static int numPlayers = 2;
     public async static void initialize()
     {
         await UnityServices.InitializeAsync();
 
         AuthenticationService.Instance.SignedIn += () =>
         {
-            Debug.Log($"Signed In As {AuthenticationService.Instance.PlayerId}");
+            StaticData.playerLoginId = AuthenticationService.Instance.PlayerId;
+            Debug.Log($"Signed In As {StaticData.playerLoginId}");
         };
         await AuthenticationService.Instance.SignInAnonymouslyAsync();
     }
 
     public async static void createRelay(TextMeshProUGUI display)
     {
-        Allocation all = await RelayService.Instance.CreateAllocationAsync(1);
+        Allocation all = await RelayService.Instance.CreateAllocationAsync(StaticData.numPlayers);
         display.text = await RelayService.Instance.GetJoinCodeAsync(all.AllocationId);
 
         NetworkManager.Singleton.GetComponent<UnityTransport>().SetHostRelayData(
@@ -63,7 +63,7 @@ public static class StaticNetworking
 
     public static void switchScenesWhenReady()
     {
-        if (waiting && NetworkManager.Singleton.ConnectedClientsList.Count == numPlayers)
+        if (waiting && NetworkManager.Singleton.ConnectedClientsList.Count == StaticData.numPlayers)
         {
             NetworkManager.Singleton.SceneManager.LoadScene("Boardgame",
                 UnityEngine.SceneManagement.LoadSceneMode.Single);
